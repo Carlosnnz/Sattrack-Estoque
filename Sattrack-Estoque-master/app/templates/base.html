@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sattrack Estoque</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="layout">
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-mark">S</div>
+            <div>
+                <p class="brand-sub">Sattrack</p>
+                <strong>Estoque</strong>
+            </div>
+        </div>
+        <nav class="menu">
+            <a href="/dashboard" class="{% if request.url.path.startswith('/dashboard') %}active{% endif %}">
+                <span class="icon">📊</span><span>Painel</span>
+            </a>
+            <a href="/movimentacoes/entradas" class="{% if request.url.path.startswith('/movimentacoes') %}active{% endif %}">
+                <span class="icon">⬇️</span><span>Movimentacoes</span>
+            </a>
+            <a href="/inventario" class="{% if request.url.path.startswith('/inventario') %}active{% endif %}">
+                <span class="icon">📦</span><span>Inventario</span>
+            </a>
+            <a href="/saidas" class="{% if request.url.path.startswith('/saidas') %}active{% endif %}">
+                <span class="icon">↗️</span><span>Saidas</span>
+            </a>
+            <a href="/transferencias" class="{% if request.url.path.startswith('/transferencias') %}active{% endif %}">
+                <span class="icon">🔄</span><span>Transferencias</span>
+            </a>
+            {% if user and user.funcao == "admin" %}
+                <a href="/auditoria" class="{% if request.url.path.startswith('/auditoria') %}active{% endif %}">
+                    <span class="icon">🗂️</span><span>Auditoria</span>
+                </a>
+                <a href="/usuarios" class="{% if request.url.path.startswith('/usuarios') %}active{% endif %}">
+                    <span class="icon">👤</span><span>Usuarios</span>
+                </a>
+            {% endif %}
+        </nav>
+        {% if user %}
+        <div class="sidebar-user">
+            {% if user.foto %}
+                <img src="{{ user.foto }}" alt="Foto do usuario" class="avatar">
+            {% else %}
+                <div class="avatar fallback">{{ user.nome[:1]|upper }}</div>
+            {% endif %}
+            <div class="user-meta">
+                <div class="user-name">{{ user.nome }}</div>
+                <div class="user-role">{{ user.funcao }}</div>
+                <a href="/logout" class="logout-link">Sair</a>
+            </div>
+        </div>
+        {% endif %}
+    </aside>
+    <main class="content">
+        <header class="page-header">
+            <div>
+                <p class="eyebrow">Sattrack Estoque</p>
+                <h1>{% block title %}{% endblock %}</h1>
+            </div>
+        </header>
+        <section class="page-body">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+</div>
+</body>
+</html>

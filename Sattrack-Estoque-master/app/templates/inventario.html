@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Inventario{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">Filtro</div>
+    <form method="get" action="/inventario" class="filters-grid">
+        <label>Codigo<input name="codigo" value="{{ filtro_codigo }}"></label>
+        <label>Descricao<input name="descricao" value="{{ filtro_descricao }}"></label>
+        <label>Categoria
+            <select name="categoria">
+                <option value="">Todas</option>
+                {% for cat in categorias %}
+                    <option value="{{ cat }}" {% if filtro_categoria == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="inline-actions">
+            <button class="btn" type="submit">Buscar</button>
+            <a class="btn secondary" href="/inventario">Limpar</a>
+        </div>
+    </form>
+</div>
+
+<div class="grid two">
+    <div class="card">
+        <div class="card-header">Cadastrar Item</div>
+        <form method="post" action="/inventario/cadastrar" enctype="multipart/form-data" class="form-grid">
+            <label>Codigo Interno<input name="codigo_interno" required></label>
+            <label>Descricao<input name="descricao" required></label>
+            <label>Categoria<input name="categoria"></label>
+            <label>Quantidade<input type="number" name="quantidade" min="0" value="0"></label>
+            <label>Valor Unitario<input type="number" step="0.01" name="valor_unitario" value="0.00" required></label>
+            <label>Localizacao<input name="localizacao"></label>
+            <label>Foto<input type="file" name="foto" accept=".jpg,.jpeg,.png"></label>
+            <button class="btn" type="submit">Salvar</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-header">Itens</div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th></th><th>Codigo</th><th>Descricao</th><th>Categoria</th><th>Qtd</th><th>Valor</th><th>Local</th><th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for item in itens %}
+                    <tr>
+                        <td>{% if item.foto %}<img src="{{ item.foto }}" class="small-avatar" alt="foto">{% endif %}</td>
+                        <td>{{ item.codigo_interno }}</td>
+                        <td>{{ item.descricao }}</td>
+                        <td>{{ item.categoria }}</td>
+                        <td>{{ item.quantidade }}</td>
+                        <td>R$ {{ "%.2f"|format(item.valor_unitario) }}</td>
+                        <td>{{ item.localizacao }}</td>
+                        <td>
+                            <details>
+                                <summary>Editar</summary>
+                                <form method="post" action="/items/{{ item.id }}/editar" enctype="multipart/form-data" class="form-grid">
+                                    <input name="descricao" value="{{ item.descricao }}" required>
+                                    <input name="categoria" value="{{ item.categoria }}">
+                                    <input type="number" name="quantidade" value="{{ item.quantidade }}" required>
+                                    <input type="number" step="0.01" name="valor_unitario" value="{{ item.valor_unitario }}" required>
+                                    <input name="localizacao" value="{{ item.localizacao }}">
+                                    <input type="file" name="foto" accept=".jpg,.jpeg,.png">
+                                    <button class="btn" type="submit">Salvar</button>
+                                </form>
+                                <form method="post" action="/items/{{ item.id }}/deletar" onsubmit="return confirm('Excluir item?');">
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </details>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="8">Nenhum item cadastrado.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sattrack Estoque</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="auth-body">
+    <div class="auth-card">
+        <h1>Sattrack Estoque</h1>
+        <p class="auth-subtitle">Acesse com seu email e senha.</p>
+        {% if error %}
+            <div class="alert error">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login" class="auth-form">
+            <label>Email
+                <input type="email" name="email" autocomplete="username" required>
+            </label>
+            <label>Senha
+                <input type="password" name="senha" autocomplete="current-password" required>
+            </label>
+            <button class="btn" type="submit">Entrar</button>
+        </form>
+        <p class="auth-subtitle" style="margin-top: 10px;">Padrao: admin@sattrack.local / admin</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Compras{% endblock %}
+{% block content %}
+<a href="#nova-compra" class="floating-btn">Nova Compra</a>
+<div class="grid two" id="nova-compra">
+    <div class="card">
+        <div class="card-title">Nova Compra</div>
+        <form method="post" action="/compras/criar" class="form-grid" enctype="multipart/form-data">
+            <label>Fornecedor<input name="fornecedor" required></label>
+            <label>Item<input name="item_nome" required></label>
+            <label>Destino<input name="destino" placeholder="Setor/Filial/Responsável"></label>
+            <label>Quantidade<input type="number" name="quantidade" min="1" required></label>
+            <label>Data do Pedido<input type="date" name="data_pedido"></label>
+            <label>Custo Unitário<input type="number" step="0.01" name="custo_unitario" required></label>
+            <label>Status
+                <select name="status" required>
+                    <option value="pendente">Pendente</option>
+                    <option value="enviado">A Caminho</option>
+                    <option value="entregue">Entregue</option>
+                </select>
+            </label>
+            <label>Nota Fiscal (PDF/JPG/PNG)<input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png"></label>
+            <button type="submit">Salvar</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-title">Compras</div>
+        <form method="get" action="/compras" class="form-grid" style="margin-bottom:10px;">
+            <label>Fornecedor<input name="fornecedor" value="{{ filtro_fornecedor }}"></label>
+            <label>Data<input type="date" name="data_pedido" value="{{ filtro_data }}"></label>
+            <label>Status
+                <select name="status">
+                    <option value="">Todas</option>
+                    <option value="pendente" {% if filtro_status=='pendente' %}selected{% endif %}>Pendente</option>
+                    <option value="enviado" {% if filtro_status=='enviado' %}selected{% endif %}>A Caminho</option>
+                    <option value="entregue" {% if filtro_status=='entregue' %}selected{% endif %}>Entregue</option>
+                </select>
+            </label>
+            <button type="submit">Filtrar</button>
+            <a class="secondary-btn" href="/compras">Limpar</a>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Fornecedor</th><th>Item</th><th>Destino</th><th>Qtd</th><th>Data</th><th>Custo</th><th>Status</th><th>NF</th><th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for c in compras %}
+                <tr>
+                    <td>{{ c.fornecedor }}</td>
+                    <td>{{ c.item_nome }}</td>
+                    <td>{{ c.destino }}</td>
+                    <td>{{ c.quantidade }}</td>
+                    <td>{{ c.data_pedido }}</td>
+                    <td>R$ {{ "%.2f"|format(c.custo_unitario) }}</td>
+                    <td>{{ c.status }}</td>
+                    <td>
+                        {% if c.caminho_nf %}
+                            <a href="{{ c.caminho_nf }}" target="_blank">Baixar</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <details>
+                            <summary>Editar</summary>
+                            <form method="post" action="/compras/{{ c.id }}/editar" class="inline-form" enctype="multipart/form-data">
+                                <input name="fornecedor" value="{{ c.fornecedor }}" required>
+                                <input name="item_nome" value="{{ c.item_nome }}" required>
+                                <input name="destino" value="{{ c.destino }}">
+                                <input type="number" name="quantidade" value="{{ c.quantidade }}" min="1" required>
+                                <input type="date" name="data_pedido" value="{{ c.data_pedido }}">
+                                <input type="number" step="0.01" name="custo_unitario" value="{{ c.custo_unitario }}" required>
+                                <select name="status">
+                                    <option value="pendente" {% if c.status=='pendente' %}selected{% endif %}>Pendente</option>
+                                    <option value="enviado" {% if c.status=='enviado' %}selected{% endif %}>A Caminho</option>
+                                    <option value="entregue" {% if c.status=='entregue' %}selected{% endif %}>Entregue</option>
+                                </select>
+                                <input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png">
+                                <button type="submit">Salvar</button>
+                            </form>
+                            <form method="post" action="/compras/{{ c.id }}/deletar" onsubmit="return confirm('Excluir compra?');">
+                                <button type="submit" class="danger">Excluir</button>
+                            </form>
+                        </details>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="9">Nenhuma compra registrada.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

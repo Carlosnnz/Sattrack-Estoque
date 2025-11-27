@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Saidas{% endblock %}
+{% block content %}
+<div class="grid two">
+    <div class="card">
+        <div class="card-header">Registrar Saida</div>
+        <form method="post" action="/saidas/registrar" class="form-grid">
+            <label>Item
+                <select name="item_id" required>
+                    <option value="">Selecione</option>
+                    {% for item in itens %}
+                        <option value="{{ item.id }}">{{ item.descricao }} ({{ item.codigo_interno }})</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
+            <label>Destino<input name="destino" required></label>
+            <label>Motivo<input name="motivo"></label>
+            <button class="btn" type="submit">Registrar</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-header">Ultimas Saidas</div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th><th>Qtd</th><th>Destino</th><th>Usuario</th><th>Motivo</th><th>Data</th><th>Acoes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in saidas %}
+                    <tr>
+                        <td>{{ s.item.descricao if s.item else s.item_id }}</td>
+                        <td>{{ s.quantidade }}</td>
+                        <td>{{ s.destino }}</td>
+                        <td>{{ s.usuario }}</td>
+                        <td>{{ s.motivo }}</td>
+                        <td>{{ s.created_at|datetime }}</td>
+                        <td>
+                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saida e ajustar estoque?');">
+                                <button class="btn danger" type="submit">Excluir</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7">Nenhum registro.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

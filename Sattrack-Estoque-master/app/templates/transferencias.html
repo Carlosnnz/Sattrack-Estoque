@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Transferencias{% endblock %}
+{% block content %}
+<div class="grid two">
+    <div class="card">
+        <div class="card-header">Registrar Transferencia</div>
+        <form method="post" action="/transferencias/registrar" class="form-grid">
+            <label>Item
+                <select name="item_id" required>
+                    <option value="">Selecione</option>
+                    {% for item in itens %}
+                        <option value="{{ item.id }}">{{ item.descricao }} ({{ item.codigo_interno }})</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Origem<input name="origem" placeholder="Local atual"></label>
+            <label>Destino<input name="destino" required></label>
+            <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
+            <button class="btn" type="submit">Registrar</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-header">Ultimas Transferencias</div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th><th>Origem</th><th>Destino</th><th>Qtd</th><th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for t in transferencias %}
+                    <tr>
+                        <td>{{ t.item.descricao if t.item else t.item_id }}</td>
+                        <td>{{ t.origem }}</td>
+                        <td>{{ t.destino }}</td>
+                        <td>{{ t.quantidade }}</td>
+                        <td>{{ t.created_at|datetime }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="5">Nenhum registro.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

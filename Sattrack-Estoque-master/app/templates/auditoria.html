@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Auditoria{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">Log de Operacoes</div>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Operacao</th><th>Item</th><th>Qtd</th><th>Usuario</th><th>Destinatario</th><th>Fornecedor</th><th>Custo</th><th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for log in logs %}
+                <tr>
+                    <td>{{ log.operacao }}</td>
+                    <td>
+                        {% if log.item_id %}
+                            {{ log.item_id }} - {{ items_map.get(log.item_id, 'sem nome') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ log.quantidade }}</td>
+                    <td>{{ log.usuario }}</td>
+                    <td>{{ log.destinatario or '-' }}</td>
+                    <td>{{ log.fornecedor or '-' }}</td>
+                    <td>{% if log.custo is not none %}R$ {{ '%.2f'|format(log.custo) }}{% else %}-{% endif %}</td>
+                    <td>{{ log.created_at|datetime }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="8">Sem registros.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
