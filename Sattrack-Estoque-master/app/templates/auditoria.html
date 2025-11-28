@@ -2,12 +2,24 @@
 {% block title %}Auditoria{% endblock %}
 {% block content %}
 <div class="card">
-    <div class="card-header">Log de Operacoes</div>
+    <div class="card-header">Log de Operações</div>
+    <form method="get" action="/auditoria" class="filters-grid" style="margin-bottom:12px;">
+        <label>Operação<input name="operacao" value="{{ filtro_operacao }}"></label>
+        <label>Item<input name="item" value="{{ filtro_item }}"></label>
+        <label>Usuário<input name="usuario" value="{{ filtro_usuario }}"></label>
+        <label>Destinatário<input name="destinatario" value="{{ filtro_destinatario }}"></label>
+        <label>Fornecedor<input name="fornecedor" value="{{ filtro_fornecedor }}"></label>
+        <label>Data<input type="date" name="data" value="{{ filtro_data }}"></label>
+        <div class="inline-actions">
+            <button class="btn" type="submit">Filtrar</button>
+            <a class="btn secondary" href="/auditoria">Limpar</a>
+        </div>
+    </form>
     <div class="table-responsive">
         <table>
             <thead>
                 <tr>
-                    <th>Operacao</th><th>Item</th><th>Qtd</th><th>Usuario</th><th>Destinatario</th><th>Fornecedor</th><th>Custo</th><th>Data</th>
+                    <th>Operação</th><th>Item</th><th>Qtd</th><th>Usuário</th><th>Destinatário</th><th>Fornecedor</th><th>Custo</th><th>Data</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,6 +45,24 @@
             {% endfor %}
             </tbody>
         </table>
+    </div>
+    <div class="inline-actions" style="justify-content: space-between; margin-top: 12px;">
+        <div>Total: {{ total }} registros</div>
+        <div style="display:flex; gap:8px; align-items:center;">
+            {% set prev_page = page - 1 %}
+            {% set next_page = page + 1 %}
+            {% if page > 1 %}
+                <a class="btn secondary" href="/auditoria?operacao={{ filtro_operacao }}&item={{ filtro_item }}&usuario={{ filtro_usuario }}&destinatario={{ filtro_destinatario }}&fornecedor={{ filtro_fornecedor }}&data={{ filtro_data }}&page={{ prev_page }}">Anterior</a>
+            {% else %}
+                <span class="badge">Anterior</span>
+            {% endif %}
+            <span>Página {{ page }} / {{ total_pages }}</span>
+            {% if page < total_pages %}
+                <a class="btn secondary" href="/auditoria?operacao={{ filtro_operacao }}&item={{ filtro_item }}&usuario={{ filtro_usuario }}&destinatario={{ filtro_destinatario }}&fornecedor={{ filtro_fornecedor }}&data={{ filtro_data }}&page={{ next_page }}">Próxima</a>
+            {% else %}
+                <span class="badge">Próxima</span>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

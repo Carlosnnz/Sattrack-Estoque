@@ -1,23 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Usuarios{% endblock %}
+{% block title %}Usuários{% endblock %}
 {% block content %}
 {% if erro %}
     <div class="alert error">
-        {% if erro == "senhas" %}As senhas nao conferem.{% elif erro == "email" %}Email ja existe.{% elif erro == "ultimo_admin" %}Nao e possivel excluir o ultimo admin.{% else %}Erro ao salvar usuario.{% endif %}
+        {% if erro == "senhas" %}As senhas não conferem.{% elif erro == "email" %}Email já existe.{% elif erro == "ultimo_admin" %}Não é possível excluir o último admin.{% else %}Erro ao salvar usuário.{% endif %}
     </div>
 {% endif %}
 {% if ok %}
     <div class="alert success">
-        {% if ok == "criado" %}Usuario criado.{% elif ok == "editado" %}Usuario atualizado.{% elif ok == "excluido" %}Usuario excluido.{% endif %}
+        {% if ok == "criado" %}Usuário criado.{% elif ok == "editado" %}Usuário atualizado.{% elif ok == "excluido" %}Usuário excluído.{% endif %}
     </div>
 {% endif %}
 <div class="grid two">
     <div class="card">
-        <div class="card-header">Cadastrar Usuario</div>
+        <div class="card-header">Cadastrar Usuário</div>
         <form method="post" action="/usuarios/criar" enctype="multipart/form-data" class="form-grid">
             <label>Nome<input name="nome" required></label>
             <label>Email<input type="email" name="email" required></label>
-            <label>Funcao
+            <label>Função
                 <select name="funcao">
                     <option value="admin">Admin</option>
                     <option value="comum" selected>Comum</option>
@@ -30,11 +30,11 @@
         </form>
     </div>
     <div class="card">
-        <div class="card-header">Usuarios</div>
+        <div class="card-header">Usuários</div>
         <div class="table-responsive">
             <table>
                 <thead>
-                    <tr><th></th><th>Nome</th><th>Email</th><th>Funcao</th><th>Acoes</th></tr>
+                    <tr><th></th><th>Nome</th><th>Email</th><th>Função</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
                 {% for u in users %}
@@ -57,14 +57,14 @@
                                     <input type="file" name="foto" accept=".jpg,.jpeg,.png">
                                     <button class="btn" type="submit">Salvar</button>
                                 </form>
-                                <form method="post" action="/usuarios/{{ u.id }}/deletar" onsubmit="return confirm('Excluir usuario?');">
+                                <form method="post" action="/usuarios/{{ u.id }}/deletar" onsubmit="return confirm('Excluir usuário?');">
                                     <button class="btn danger" type="submit">Excluir</button>
                                 </form>
                             </details>
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="5">Nenhum usuario.</td></tr>
+                    <tr><td colspan="5">Nenhum usuário.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>

@@ -1,4 +1,5 @@
 import datetime
+import json
 import uuid
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -36,6 +37,7 @@ class Item(Base):
     valor_unitario = Column(Float, default=0.0)
     localizacao = Column(String, nullable=True)
     foto = Column(String, nullable=True)
+    observacao = Column(String, nullable=True)
 
     entradas = relationship("Entrada", back_populates="item")
     saidas = relationship("Saida", back_populates="item")
@@ -113,6 +115,45 @@ class Usuario(Base):
     funcao = Column(String, nullable=False, default="comum")
     data_criacao = Column(DateTime, server_default=func.now())
     foto = Column(String, nullable=True)
+
+
+class Filial(Base):
+    __tablename__ = "filiais"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False, index=True)
+
+
+class Setor(Base):
+    __tablename__ = "setores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False, index=True)
+
+
+class Fornecedor(Base):
+    __tablename__ = "fornecedores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False, index=True)
+
+
+class CPU(Base):
+    __tablename__ = "cpus"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, nullable=False)
+    setor = Column(String, nullable=False)
+    filial = Column(String, nullable=False)
+    tag = Column(String, unique=True, nullable=False, index=True)
+    processador = Column(String, nullable=False)
+    memoria_ram = Column(String, nullable=False)
+    placa_video = Column(String, nullable=False)
+    categoria = Column(String, nullable=False)
+    anydesk = Column(String, nullable=False)
+    observacoes = Column(String, nullable=True)
+    criado_em = Column(DateTime, server_default=func.now())
+    atualizado_em = Column(DateTime, onupdate=func.now(), server_default=func.now())
 
 
 class Compra(Base):
@@ -216,6 +257,8 @@ def ensure_item_schema():
         cols = {row[1] for row in conn.execute(text("PRAGMA table_info(items)"))}
         if "foto" not in cols:
             conn.execute(text("ALTER TABLE items ADD COLUMN foto TEXT"))
+        if "observacao" not in cols:
+            conn.execute(text("ALTER TABLE items ADD COLUMN observacao TEXT"))
 
 
 def ensure_audit_schema():
@@ -227,6 +270,71 @@ def ensure_audit_schema():
             conn.execute(text("ALTER TABLE audit_log ADD COLUMN fornecedor TEXT"))
         if "custo" not in cols:
             conn.execute(text("ALTER TABLE audit_log ADD COLUMN custo REAL"))
+
+
+def ensure_filiais_setores_schema():
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS filiais (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT UNIQUE NOT NULL
+                );
+                """
+            )
+        )
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS setores (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT UNIQUE NOT NULL
+                );
+                """
+            )
+        )
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_filiais_nome ON filiais(nome);"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_setores_nome ON setores(nome);"))
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS fornecedores (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT UNIQUE NOT NULL
+                );
+                """
+            )
+        )
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_fornecedores_nome ON fornecedores(nome);"))
+
+
+def ensure_cpu_schema():
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.execute(text("PRAGMA table_info(cpus)"))}
+        if not cols:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS cpus (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nome TEXT NOT NULL,
+                        setor TEXT NOT NULL,
+                        filial TEXT NOT NULL,
+                        tag TEXT UNIQUE NOT NULL,
+                        processador TEXT NOT NULL,
+                        memoria_ram TEXT NOT NULL,
+                        placa_video TEXT NOT NULL,
+                        categoria TEXT NOT NULL,
+                        anydesk TEXT NOT NULL,
+                        observacoes TEXT,
+                        criado_em DATETIME,
+                        atualizado_em DATETIME
+                    );
+                    """
+                )
+            )
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_cpus_tag ON cpus(tag)"))
 
 
 def hash_password(password: str) -> str:
@@ -263,6 +371,8 @@ ensure_admin_user()
 ensure_entrada_schema()
 ensure_compras_schema()
 ensure_audit_schema()
+ensure_filiais_setores_schema()
+ensure_cpu_schema()
 
 app = FastAPI(title="Sattrack Estoque")
 templates = Jinja2Templates(directory="app/templates")
@@ -313,7 +423,9 @@ class UsuarioCreate(BaseModel):
 
 
 def get_actor(user: Dict[str, str]) -> str:
-    return get_actor(user) or "sistema"
+    if not user:
+        return "sistema"
+    return user.get("nome") or user.get("email") or "sistema"
 
 
 def get_db():
@@ -348,6 +460,23 @@ def record_audit(
     db.commit()
 
 
+def record_audit_cpu(db: Session, operacao: str, usuario: str, antes: Optional[dict], depois: Optional[dict]):
+    actor = usuario or "sistema"
+    antes_str = json.dumps(antes or {}, ensure_ascii=False)
+    depois_str = json.dumps(depois or {}, ensure_ascii=False)
+    log = AuditLog(
+        operacao=operacao,
+        item_id=None,
+        quantidade=None,
+        usuario=actor,
+        destinatario=antes_str[:500],
+        fornecedor=depois_str[:500],
+        custo=None,
+    )
+    db.add(log)
+    db.commit()
+
+
 def save_uploaded_file(upload: Optional[UploadFile], folder: str, allow_pdf: bool = False) -> Optional[str]:
     if not upload or not upload.filename:
         return None
@@ -366,12 +495,23 @@ def save_uploaded_file(upload: Optional[UploadFile], folder: str, allow_pdf: boo
 
 
 def find_or_create_item_for_compra(db: Session, nome: str, custo_unitario: float, user_label: str) -> Item:
-    item = db.query(Item).filter(func.lower(Item.descricao) == nome.lower()).first()
-    if item:
-        if custo_unitario:
-            item.valor_unitario = custo_unitario
-            db.commit()
-        return item
+    nome_norm = nome.strip()
+    candidatos = db.query(Item).filter(func.lower(Item.descricao) == nome_norm.lower()).all()
+
+    def custo_igual(it: Item) -> bool:
+        if custo_unitario is None:
+            return True
+        if it.valor_unitario is None:
+            return False
+        return abs((it.valor_unitario or 0) - custo_unitario) < 1e-6
+
+    for it in candidatos:
+        if custo_igual(it):
+            if custo_unitario and it.valor_unitario != custo_unitario:
+                it.valor_unitario = custo_unitario
+                db.commit()
+            return it
+
     base_codigo = "".join(ch for ch in nome.upper().replace(" ", "_") if ch.isalnum() or ch == "_") or "ITEM"
     codigo = base_codigo
     suffix = 1
@@ -618,6 +758,299 @@ def delete_item_api(item_id: int, db: Session = Depends(get_db), user=Depends(re
     record_audit(db, "exclusao", item_id, None, actor)
     return {"status": "ok"}
 
+
+# Controle de CPUs
+@app.get("/controle-cpus", include_in_schema=False)
+def controle_cpus_page(
+    request: Request,
+    setor: str = "",
+    filial: str = "",
+    categoria: str = "",
+    nome: str = "",
+    tag: str = "",
+    busca: str = "",
+    page: int = 1,
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    query = db.query(CPU)
+    if setor:
+        query = query.filter(CPU.setor.ilike(f"%{setor}%"))
+    if filial:
+        query = query.filter(CPU.filial.ilike(f"%{filial}%"))
+    if categoria:
+        query = query.filter(CPU.categoria == categoria)
+    if nome:
+        query = query.filter(CPU.nome.ilike(f"%{nome}%"))
+    if tag:
+        query = query.filter(CPU.tag.ilike(f"%{tag}%"))
+    if busca:
+        busca_like = f"%{busca}%"
+        query = query.filter(
+            CPU.nome.ilike(busca_like) | CPU.tag.ilike(busca_like) | CPU.processador.ilike(busca_like)
+        )
+
+    page = max(page, 1)
+    per_page = 15
+    total = query.count()
+    cpus = (
+        query.order_by(CPU.nome.asc(), CPU.tag.asc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
+
+    setores = [row[0] for row in db.query(CPU.setor).filter(CPU.setor.isnot(None)).distinct().order_by(CPU.setor)]
+    filiais = [row[0] for row in db.query(CPU.filial).filter(CPU.filial.isnot(None)).distinct().order_by(CPU.filial)]
+    categorias = ["NOVA-FORTE", "NOVA", "FRACA-ANTIGA"]
+    filiais_options = [f.nome for f in db.query(Filial).order_by(Filial.nome).all()]
+    setores_options = [s.nome for s in db.query(Setor).order_by(Setor.nome).all()]
+
+    categoria_counts = {row[0]: row[1] for row in db.query(CPU.categoria, func.count()).group_by(CPU.categoria)}
+    filial_counts = {row[0]: row[1] for row in db.query(CPU.filial, func.count()).group_by(CPU.filial)}
+
+    return templates.TemplateResponse(
+        "controle_cpus.html",
+        {
+            "request": request,
+            "user": user,
+            "cpus": cpus,
+            "setores": setores,
+            "filiais": filiais,
+            "categorias": categorias,
+            "filtro_setor": setor,
+            "filtro_filial": filial,
+            "filtro_categoria": categoria,
+            "filtro_nome": nome,
+            "filtro_tag": tag,
+            "filtro_busca": busca,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": (total + per_page - 1) // per_page if per_page else 1,
+            "erro": request.query_params.get("erro"),
+            "categoria_counts": categoria_counts,
+            "filial_counts": filial_counts,
+            "filiais_options": filiais_options,
+            "setores_options": setores_options,
+        },
+    )
+
+
+@app.post("/controle-cpus/criar", include_in_schema=False)
+def controle_cpus_criar(
+    nome: str = Form(...),
+    setor: str = Form(...),
+    filial: str = Form(...),
+    tag: str = Form(...),
+    processador: str = Form(...),
+    memoria_ram: str = Form(...),
+    placa_video: str = Form(...),
+    categoria: str = Form(...),
+    anydesk: str = Form(...),
+    observacoes: str = Form(""),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    actor = get_actor(user)
+    if db.query(CPU).filter(CPU.tag == tag).first():
+        return RedirectResponse(url="/controle-cpus?erro=tag", status_code=303)
+    novo = CPU(
+        nome=nome,
+        setor=setor,
+        filial=filial,
+        tag=tag,
+        processador=processador,
+        memoria_ram=memoria_ram,
+        placa_video=placa_video,
+        categoria=categoria,
+        anydesk=anydesk,
+        observacoes=observacoes,
+    )
+    db.add(novo)
+    db.commit()
+    record_audit_cpu(db, "criar_cpu", actor, None, {
+        "nome": nome,
+        "setor": setor,
+        "filial": filial,
+        "tag": tag,
+        "processador": processador,
+        "memoria_ram": memoria_ram,
+        "placa_video": placa_video,
+        "categoria": categoria,
+        "anydesk": anydesk,
+        "observacoes": observacoes,
+    })
+    return RedirectResponse(url="/controle-cpus", status_code=303)
+
+
+@app.post("/controle-cpus/{cpu_id}/editar", include_in_schema=False)
+def controle_cpus_editar(
+    cpu_id: int,
+    nome: str = Form(...),
+    setor: str = Form(...),
+    filial: str = Form(...),
+    tag: str = Form(...),
+    processador: str = Form(...),
+    memoria_ram: str = Form(...),
+    placa_video: str = Form(...),
+    categoria: str = Form(...),
+    anydesk: str = Form(...),
+    observacoes: str = Form(""),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    actor = get_actor(user)
+    cpu = db.get(CPU, cpu_id)
+    if not cpu:
+        raise HTTPException(status_code=404, detail="CPU não encontrada")
+    if tag != cpu.tag and db.query(CPU).filter(CPU.tag == tag).first():
+        return RedirectResponse(url="/controle-cpus?erro=tag", status_code=303)
+    antes = {
+        "nome": cpu.nome,
+        "setor": cpu.setor,
+        "filial": cpu.filial,
+        "tag": cpu.tag,
+        "processador": cpu.processador,
+        "memoria_ram": cpu.memoria_ram,
+        "placa_video": cpu.placa_video,
+        "categoria": cpu.categoria,
+        "anydesk": cpu.anydesk,
+        "observacoes": cpu.observacoes,
+    }
+    cpu.nome = nome
+    cpu.setor = setor
+    cpu.filial = filial
+    cpu.tag = tag
+    cpu.processador = processador
+    cpu.memoria_ram = memoria_ram
+    cpu.placa_video = placa_video
+    cpu.categoria = categoria
+    cpu.anydesk = anydesk
+    cpu.observacoes = observacoes
+    db.commit()
+    depois = {
+        "nome": cpu.nome,
+        "setor": cpu.setor,
+        "filial": cpu.filial,
+        "tag": cpu.tag,
+        "processador": cpu.processador,
+        "memoria_ram": cpu.memoria_ram,
+        "placa_video": cpu.placa_video,
+        "categoria": cpu.categoria,
+        "anydesk": cpu.anydesk,
+        "observacoes": cpu.observacoes,
+    }
+    record_audit_cpu(db, "editar_cpu", actor, antes, depois)
+    return RedirectResponse(url="/controle-cpus", status_code=303)
+
+
+@app.post("/controle-cpus/{cpu_id}/deletar", include_in_schema=False)
+def controle_cpus_deletar(cpu_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    actor = get_actor(user)
+    cpu = db.get(CPU, cpu_id)
+    if not cpu:
+        raise HTTPException(status_code=404, detail="CPU não encontrada")
+    antes = {
+        "nome": cpu.nome,
+        "setor": cpu.setor,
+        "filial": cpu.filial,
+        "tag": cpu.tag,
+        "processador": cpu.processador,
+        "memoria_ram": cpu.memoria_ram,
+        "placa_video": cpu.placa_video,
+        "categoria": cpu.categoria,
+        "anydesk": cpu.anydesk,
+        "observacoes": cpu.observacoes,
+    }
+    db.delete(cpu)
+    db.commit()
+    record_audit_cpu(db, "deletar_cpu", actor, antes, None)
+    return RedirectResponse(url="/controle-cpus", status_code=303)
+
+# Filiais e Setores (cadastro simples)
+@app.get("/filiais-setores", include_in_schema=False)
+def filiais_setores_page(request: Request, db: Session = Depends(get_db), user=Depends(require_admin)):
+    filiais = db.query(Filial).order_by(Filial.nome).all()
+    setores = db.query(Setor).order_by(Setor.nome).all()
+    fornecedores = db.query(Fornecedor).order_by(Fornecedor.nome).all()
+    return templates.TemplateResponse(
+        "filiais_setores.html",
+        {"request": request, "user": user, "filiais": filiais, "setores": setores, "fornecedores": fornecedores, "erro": request.query_params.get("erro")},
+    )
+
+
+@app.post("/filiais/criar", include_in_schema=False)
+def criar_filial(nome: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    if db.query(Filial).filter(func.lower(Filial.nome) == nome.lower()).first():
+        return RedirectResponse(url="/filiais-setores?erro=filial", status_code=303)
+    nova = Filial(nome=nome)
+    db.add(nova)
+    db.commit()
+    record_audit(db, "criar_filial", None, None, actor, fornecedor=nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+
+@app.post("/setores/criar", include_in_schema=False)
+def criar_setor(nome: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    if db.query(Setor).filter(func.lower(Setor.nome) == nome.lower()).first():
+        return RedirectResponse(url="/filiais-setores?erro=setor", status_code=303)
+    novo = Setor(nome=nome)
+    db.add(novo)
+    db.commit()
+    record_audit(db, "criar_setor", None, None, actor, fornecedor=nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+
+@app.post("/filiais/{filial_id}/deletar", include_in_schema=False)
+def deletar_filial(filial_id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    filial = db.get(Filial, filial_id)
+    if not filial:
+        raise HTTPException(status_code=404, detail="Filial não encontrada")
+    db.delete(filial)
+    db.commit()
+    record_audit(db, "deletar_filial", None, None, actor, fornecedor=filial.nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+
+@app.post("/setores/{setor_id}/deletar", include_in_schema=False)
+def deletar_setor(setor_id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    setor = db.get(Setor, setor_id)
+    if not setor:
+        raise HTTPException(status_code=404, detail="Setor não encontrado")
+    db.delete(setor)
+    db.commit()
+    record_audit(db, "deletar_setor", None, None, actor, fornecedor=setor.nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+
+@app.post("/fornecedores/criar", include_in_schema=False)
+def criar_fornecedor(nome: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    if db.query(Fornecedor).filter(func.lower(Fornecedor.nome) == nome.lower()).first():
+        return RedirectResponse(url="/filiais-setores?erro=fornecedor", status_code=303)
+    novo = Fornecedor(nome=nome)
+    db.add(novo)
+    db.commit()
+    record_audit(db, "criar_fornecedor", None, None, actor, fornecedor=nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+
+@app.post("/fornecedores/{fornecedor_id}/deletar", include_in_schema=False)
+def deletar_fornecedor(fornecedor_id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    fornecedor = db.get(Fornecedor, fornecedor_id)
+    if not fornecedor:
+        raise HTTPException(status_code=404, detail="Fornecedor não encontrado")
+    db.delete(fornecedor)
+    db.commit()
+    record_audit(db, "deletar_fornecedor", None, None, actor, fornecedor=fornecedor.nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
 # Inventory pages
 @app.get("/inventario", include_in_schema=False)
 def inventory_page(
@@ -636,6 +1069,13 @@ def inventory_page(
     if categoria:
         query = query.filter(Item.categoria.ilike(f"%{categoria}%"))
     itens = query.order_by(Item.descricao).all()
+    erro_item_id = request.query_params.get("item_id")
+    item_relacionado = None
+    if erro_item_id:
+        try:
+            item_relacionado = db.get(Item, int(erro_item_id))
+        except Exception:
+            item_relacionado = None
     categorias = [row[0] for row in db.query(Item.categoria).filter(Item.categoria.isnot(None)).distinct().order_by(Item.categoria)]
     return templates.TemplateResponse(
         "inventario.html",
@@ -648,6 +1088,7 @@ def inventory_page(
             "filtro_categoria": categoria,
             "categorias": categorias,
             "erro": request.query_params.get("erro"),
+            "item_relacionado": item_relacionado,
         },
     )
 
@@ -661,6 +1102,7 @@ async def cadastrar_item_inventario(
     valor_unitario: float = Form(0.0),
     localizacao: str = Form(""),
     foto: UploadFile = File(None),
+    observacao: str = Form(""),
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
@@ -676,6 +1118,7 @@ async def cadastrar_item_inventario(
         valor_unitario=valor_unitario,
         localizacao=localizacao,
         foto=foto_path,
+        observacao=observacao,
     )
     db.add(item)
     db.commit()
@@ -722,6 +1165,7 @@ async def edit_item_form(
     valor_unitario: float = Form(0.0),
     localizacao: str = Form(""),
     foto: UploadFile = File(None),
+    observacao: str = Form(""),
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
@@ -735,6 +1179,7 @@ async def edit_item_form(
     item.quantidade = quantidade
     item.valor_unitario = valor_unitario
     item.localizacao = localizacao
+    item.observacao = observacao
     foto_path = save_uploaded_file(foto, "uploads/itens")
     if foto_path:
         item.foto = foto_path
@@ -744,14 +1189,29 @@ async def edit_item_form(
 
 
 @app.post("/items/{item_id}/deletar", include_in_schema=False)
-def delete_item_form(item_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+def delete_item_form(
+    item_id: int,
+    force: int = Form(0),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
     actor = get_actor(user)
     item = db.get(Item, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Item nao encontrado")
+    # Impede exclusão se o item tiver movimentações vinculadas, a menos que forçado
+    tem_entradas = db.query(Entrada.id).filter(Entrada.item_id == item_id).first()
+    tem_saidas = db.query(Saida.id).filter(Saida.item_id == item_id).first()
+    tem_transf = db.query(Transferencia.id).filter(Transferencia.item_id == item_id).first()
+    if (tem_entradas or tem_saidas or tem_transf) and not force:
+        return RedirectResponse(url=f"/inventario?erro=item_relacionado&item_id={item_id}", status_code=303)
+    if force:
+        db.query(Entrada).filter(Entrada.item_id == item_id).delete(synchronize_session=False)
+        db.query(Saida).filter(Saida.item_id == item_id).delete(synchronize_session=False)
+        db.query(Transferencia).filter(Transferencia.item_id == item_id).delete(synchronize_session=False)
     db.delete(item)
     db.commit()
-    record_audit(db, "exclusao", item_id, None, actor)
+    record_audit(db, "exclusao_forcada" if force else "exclusao", item_id, None, actor)
     return RedirectResponse(url="/inventario", status_code=303)
 
 
@@ -915,7 +1375,12 @@ def deletar_entrada(entrada_id: int, db: Session = Depends(get_db), user=Depends
 def saidas_page(request: Request, db: Session = Depends(get_db), user=Depends(require_user)):
     itens = db.query(Item).order_by(Item.descricao).all()
     saidas = db.query(Saida).order_by(Saida.created_at.desc()).limit(20).all()
-    return templates.TemplateResponse("saidas.html", {"request": request, "itens": itens, "saidas": saidas, "user": user})
+    filiais_options = [f.nome for f in db.query(Filial).order_by(Filial.nome).all()]
+    setores_options = [s.nome for s in db.query(Setor).order_by(Setor.nome).all()]
+    return templates.TemplateResponse(
+        "saidas.html",
+        {"request": request, "itens": itens, "saidas": saidas, "user": user, "filiais_options": filiais_options, "setores_options": setores_options},
+    )
 
 
 @app.post("/api/saidas")
@@ -1040,6 +1505,7 @@ def compras_page(
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
+    # mantido redirecionamento original
     return RedirectResponse(url="/movimentacoes/entradas", status_code=303)
 
 
@@ -1207,6 +1673,7 @@ def movimentacoes_page(
     itens = db.query(Item).order_by(Item.descricao).all()
     compras_query = db.query(Compra)
     entradas_query = db.query(Entrada)
+    fornecedores_options = [f.nome for f in db.query(Fornecedor).order_by(Fornecedor.nome).all()]
 
     if fornecedor:
         compras_query = compras_query.filter(Compra.fornecedor.ilike(f"%{fornecedor}%"))
@@ -1231,6 +1698,8 @@ def movimentacoes_page(
     entradas = entradas_query.order_by(Entrada.created_at.desc()).limit(200).all()
     compras = compras_query.order_by(Compra.id.desc()).all()
     compra_map = {c.id: c for c in compras}
+    filiais_options = [f.nome for f in db.query(Filial).order_by(Filial.nome).all()]
+    setores_options = [s.nome for s in db.query(Setor).order_by(Setor.nome).all()]
 
     include_manual = tipo in ("", "entrada", "entrada_manual", "manual", "todos")
     include_auto = tipo in ("", "entrada", "entrada_automatica", "automatica", "todos")
@@ -1316,18 +1785,82 @@ def movimentacoes_page(
             "filtro_status": status,
             "filtro_destinatario": destinatario,
             "filtro_data": data,
+            "filiais_options": filiais_options,
+            "setores_options": setores_options,
+            "fornecedores_options": fornecedores_options,
         },
     )
 
 
 # Auditoria
 @app.get("/auditoria", include_in_schema=False)
-def audit_page(request: Request, db: Session = Depends(get_db), user=Depends(require_admin)):
-    logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(50).all()
+def audit_page(
+    request: Request,
+    operacao: str = "",
+    item: str = "",
+    usuario: str = "",
+    destinatario: str = "",
+    fornecedor: str = "",
+    data: str = "",
+    page: int = 1,
+    db: Session = Depends(get_db),
+    user=Depends(require_admin),
+):
+    query = db.query(AuditLog)
+
+    if operacao:
+        query = query.filter(func.lower(AuditLog.operacao).like(f"%{operacao.lower()}%"))
+    if usuario:
+        query = query.filter(func.lower(AuditLog.usuario).like(f"%{usuario.lower()}%"))
+    if destinatario:
+        query = query.filter(func.lower(AuditLog.destinatario).like(f"%{destinatario.lower()}%"))
+    if fornecedor:
+        query = query.filter(func.lower(AuditLog.fornecedor).like(f"%{fornecedor.lower()}%"))
+    if item:
+        query = query.join(Item, Item.id == AuditLog.item_id, isouter=True)
+        joined_item = True
+        item_val = f"%{item.lower()}%"
+        query = query.filter(
+            func.coalesce(func.lower(Item.descricao), "").
+            like(item_val) | func.cast(AuditLog.item_id, String).like(item_val)
+        )
+    if data:
+        try:
+            data_ref = datetime.date.fromisoformat(data)
+            inicio = datetime.datetime.combine(data_ref, datetime.time.min)
+            fim = inicio + datetime.timedelta(days=1)
+            query = query.filter(AuditLog.created_at >= inicio, AuditLog.created_at < fim)
+        except Exception:
+            pass
+
+    page = max(page, 1)
+    per_page = 15
+    total = query.count()
+    logs = (
+        query.order_by(AuditLog.created_at.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
+    )
     items_map = {it.id: it.descricao for it in db.query(Item.id, Item.descricao)}
     return templates.TemplateResponse(
         "auditoria.html",
-        {"request": request, "logs": logs, "user": user, "items_map": items_map},
+        {
+            "request": request,
+            "logs": logs,
+            "user": user,
+            "items_map": items_map,
+            "filtro_operacao": operacao,
+            "filtro_item": item,
+            "filtro_usuario": usuario,
+            "filtro_destinatario": destinatario,
+            "filtro_fornecedor": fornecedor,
+            "filtro_data": data,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": (total + per_page - 1) // per_page if per_page else 1,
+        },
     )
 
 

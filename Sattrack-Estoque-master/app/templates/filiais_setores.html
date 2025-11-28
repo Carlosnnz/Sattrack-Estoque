@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Variáveis{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">Cadastro de Variáveis</div>
+    {% if erro %}
+        <div class="alert error">
+            {% if erro == 'filial' %}Filial já existe.{% elif erro == 'setor' %}Setor já existe.{% elif erro == 'fornecedor' %}Fornecedor já existe.{% else %}Erro ao salvar.{% endif %}
+        </div>
+    {% endif %}
+    <div class="grid three">
+        <div class="card">
+            <div class="card-header">Filiais</div>
+            <form method="post" action="/filiais/criar" class="inline-actions">
+                <input name="nome" placeholder="Nova filial" required>
+                <button class="btn" type="submit">Adicionar</button>
+            </form>
+            <div class="table-responsive" style="margin-top:10px;">
+                <table>
+                    <thead><tr><th>Filial</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        {% for f in filiais %}
+                        <tr>
+                            <td>{{ f.nome }}</td>
+                            <td>
+                                <form method="post" action="/filiais/{{ f.id }}/deletar" onsubmit="return confirm('Excluir filial?');">
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2">Nenhuma filial cadastrada.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">Setores</div>
+            <form method="post" action="/setores/criar" class="inline-actions">
+                <input name="nome" placeholder="Novo setor" required>
+                <button class="btn" type="submit">Adicionar</button>
+            </form>
+            <div class="table-responsive" style="margin-top:10px;">
+                <table>
+                    <thead><tr><th>Setor</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        {% for s in setores %}
+                        <tr>
+                            <td>{{ s.nome }}</td>
+                            <td>
+                                <form method="post" action="/setores/{{ s.id }}/deletar" onsubmit="return confirm('Excluir setor?');">
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2">Nenhum setor cadastrado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">Fornecedores</div>
+            <form method="post" action="/fornecedores/criar" class="inline-actions">
+                <input name="nome" placeholder="Novo fornecedor" required>
+                <button class="btn" type="submit">Adicionar</button>
+            </form>
+            <div class="table-responsive" style="margin-top:10px;">
+                <table>
+                    <thead><tr><th>Fornecedor</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        {% for f in fornecedores %}
+                        <tr>
+                            <td>{{ f.nome }}</td>
+                            <td>
+                                <form method="post" action="/fornecedores/{{ f.id }}/deletar" onsubmit="return confirm('Excluir fornecedor?');">
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2">Nenhum fornecedor cadastrado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -6,9 +6,16 @@
     <div class="card">
         <div class="card-title">Nova Compra</div>
         <form method="post" action="/compras/criar" class="form-grid" enctype="multipart/form-data">
-            <label>Fornecedor<input name="fornecedor" required></label>
+            <label>Fornecedor
+                <select name="fornecedor" required>
+                    <option value="">Selecione</option>
+                    {% for f in fornecedores_options %}
+                        <option value="{{ f }}">{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <label>Item<input name="item_nome" required></label>
-            <label>Destino<input name="destino" placeholder="Setor/Filial/Responsável"></label>
+            <label>Filial/Setor<input name="destino" placeholder="Filial ou Setor"></label>
             <label>Quantidade<input type="number" name="quantidade" min="1" required></label>
             <label>Data do Pedido<input type="date" name="data_pedido"></label>
             <label>Custo Unitário<input type="number" step="0.01" name="custo_unitario" required></label>
@@ -42,7 +49,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Fornecedor</th><th>Item</th><th>Destino</th><th>Qtd</th><th>Data</th><th>Custo</th><th>Status</th><th>NF</th><th>Ações</th>
+                    <th>Fornecedor</th><th>Item</th><th>Filial/Setor</th><th>Qtd</th><th>Data</th><th>Custo</th><th>Status</th><th>NF</th><th>Ações</th>
                 </tr>
             </thead>
             <tbody>

@@ -3,20 +3,28 @@
 {% block content %}
 <div class="grid stats">
     <div class="card stat-card">
-        <p class="stat-label">Total de Itens</p>
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+            <i class="fi fi-rr-box"></i><span>Total de Itens</span>
+        </p>
         <div class="stat-value">{{ total_itens }}</div>
     </div>
     <div class="card stat-card">
-        <p class="stat-label">Quantidade em Estoque</p>
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+            <i class="fi fi-rr-layers"></i><span>Quantidade em Estoque</span>
+        </p>
         <div class="stat-value">{{ total_quantidade }}</div>
     </div>
     <div class="card stat-card">
-        <p class="stat-label">Valor Total</p>
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+            <i class="fi fi-rr-coin"></i><span>Valor Total</span>
+        </p>
         <div class="stat-value">R$ {{ "%.2f"|format(valor_total) }}</div>
-        <p class="stat-sub">Inventario calculado pela ultima entrada</p>
+        <p class="stat-sub">Inventário calculado pela última entrada</p>
     </div>
     <div class="card stat-card">
-        <p class="stat-label">Movimentacoes Hoje</p>
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+            <i class="fi fi-rr-time-fast"></i><span>Movimentações Hoje</span>
+        </p>
         <div class="stat-value">{{ movimentacoes_hoje }}</div>
         <p class="stat-sub">Itens com estoque baixo: {{ estoque_baixo }}</p>
     </div>
@@ -28,7 +36,7 @@
         <div class="chart-container"><canvas id="chart-estoque"></canvas></div>
     </div>
     <div class="card">
-        <div class="card-header">Entradas vs Saidas (7 dias)</div>
+        <div class="card-header">Entradas vs Saídas (7 dias)</div>
         <div class="chart-container"><canvas id="chart-fluxo"></canvas></div>
     </div>
     <div class="card">
@@ -39,12 +47,12 @@
 
 <div class="grid two">
     <div class="card">
-        <div class="card-header">Ultimas Entradas</div>
+        <div class="card-header">Últimas Entradas</div>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
-                        <th>Item</th><th>Qtd</th><th>Usuario</th><th>Data</th>
+                        <th>Item</th><th>Qtd</th><th>Usuário</th><th>Data</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -63,12 +71,12 @@
         </div>
     </div>
     <div class="card">
-        <div class="card-header">Ultimas Saidas</div>
+        <div class="card-header">Últimas Saídas</div>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
-                        <th>Item</th><th>Qtd</th><th>Usuario</th><th>Data</th>
+                        <th>Item</th><th>Qtd</th><th>Usuário</th><th>Data</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -80,7 +88,7 @@
                         <td>{{ s.created_at|datetime }}</td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="4">Nenhuma saida.</td></tr>
+                    <tr><td colspan="4">Nenhuma saída.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
@@ -127,7 +135,7 @@ async function loadCharts() {
                     tension: 0.25,
                 },
                 {
-                    label: 'Saidas',
+                    label: 'Saídas',
                     data: fluxo.saidas,
                     borderColor: '#ef4444',
                     backgroundColor: 'rgba(239,68,68,0.16)',

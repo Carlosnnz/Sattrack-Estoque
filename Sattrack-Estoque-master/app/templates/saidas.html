@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Saidas{% endblock %}
+{% block title %}Saídas{% endblock %}
 {% block content %}
 <div class="grid two">
     <div class="card">
-        <div class="card-header">Registrar Saida</div>
+        <div class="card-header">Registrar Saída</div>
         <form method="post" action="/saidas/registrar" class="form-grid">
             <label>Item
                 <select name="item_id" required>
@@ -14,18 +14,34 @@
                 </select>
             </label>
             <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
-            <label>Destino<input name="destino" required></label>
+            <input type="hidden" name="destino" id="destino_saida_hidden">
+            <label>Filial
+                <select id="filial_saida_select">
+                    <option value="">Selecione</option>
+                    {% for f in filiais_options %}
+                        <option value="{{ f }}">{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Setor
+                <select id="setor_saida_select">
+                    <option value="">Selecione</option>
+                    {% for s in setores_options %}
+                        <option value="{{ s }}">{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <label>Motivo<input name="motivo"></label>
             <button class="btn" type="submit">Registrar</button>
         </form>
     </div>
     <div class="card">
-        <div class="card-header">Ultimas Saidas</div>
+        <div class="card-header">Últimas Saídas</div>
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
-                        <th>Item</th><th>Qtd</th><th>Destino</th><th>Usuario</th><th>Motivo</th><th>Data</th><th>Acoes</th>
+                        <th>Item</th><th>Qtd</th><th>Filial/Setor</th><th>Usuário</th><th>Motivo</th><th>Data</th><th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -38,7 +54,7 @@
                         <td>{{ s.motivo }}</td>
                         <td>{{ s.created_at|datetime }}</td>
                         <td>
-                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saida e ajustar estoque?');">
+                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saída e ajustar estoque?');">
                                 <button class="btn danger" type="submit">Excluir</button>
                             </form>
                         </td>
@@ -51,4 +67,19 @@
         </div>
     </div>
 </div>
+<script>
+    (function() {
+        const filial = document.getElementById('filial_saida_select');
+        const setor = document.getElementById('setor_saida_select');
+        const hidden = document.getElementById('destino_saida_hidden');
+        function sync() {
+            hidden.value = [filial.value, setor.value].filter(Boolean).join(' / ');
+        }
+        if (filial && setor && hidden) {
+            filial.addEventListener('change', sync);
+            setor.addEventListener('change', sync);
+            sync();
+        }
+    })();
+</script>
 {% endblock %}

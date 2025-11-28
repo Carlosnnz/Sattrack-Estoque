@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
@@ -7,8 +7,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.4.2/uicons-regular-rounded/css/uicons-regular-rounded.css">
-    <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.4.2/uicons-regular-straight/css/uicons-regular-straight.css">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -23,33 +21,28 @@
         </div>
         <nav class="menu">
             <a href="/dashboard" class="{% if request.url.path.startswith('/dashboard') %}active{% endif %}">
-                <i class="fi fi-rr-chart-histogram icon"></i><span>Painel</span>
-            </a>
-            <a href="/inventario" class="{% if request.url.path.startswith('/inventario') %}active{% endif %}">
-                <i class="fi fi-rr-briefcase icon"></i><span>Inventário</span>
+                <span class="icon">📊</span><span>Painel</span>
             </a>
             <a href="/movimentacoes/entradas" class="{% if request.url.path.startswith('/movimentacoes') %}active{% endif %}">
-                <i class="fi fi-rs-shopping-cart icon"></i><span>Compras</span>
-            </a>            <a href="/saidas" class="{% if request.url.path.startswith('/saidas') %}active{% endif %}">
-                <i class="fi fi-rs-paper-plane icon"></i><span>Saídas</span>
+                <span class="icon">⬇️</span><span>Movimentacoes</span>
+            </a>
+            <a href="/inventario" class="{% if request.url.path.startswith('/inventario') %}active{% endif %}">
+                <span class="icon">📦</span><span>Inventario</span>
+            </a>
+            <a href="/saidas" class="{% if request.url.path.startswith('/saidas') %}active{% endif %}">
+                <span class="icon">↗️</span><span>Saidas</span>
             </a>
             <a href="/transferencias" class="{% if request.url.path.startswith('/transferencias') %}active{% endif %}">
-                <i class="fi fi-rr-arrow-right icon"></i><span>Transferências</span>
+                <span class="icon">🔄</span><span>Transferencias</span>
             </a>
             {% if user and user.funcao == "admin" %}
                 <a href="/auditoria" class="{% if request.url.path.startswith('/auditoria') %}active{% endif %}">
-                    <i class="fi fi-rs-edit icon"></i><span>Auditoria</span>
+                    <span class="icon">🗂️</span><span>Auditoria</span>
                 </a>
                 <a href="/usuarios" class="{% if request.url.path.startswith('/usuarios') %}active{% endif %}">
-                    <i class="fi fi-rr-user icon"></i><span>Usuários</span>
-                </a>
-                <a href="/filiais-setores" class="{% if request.url.path.startswith('/filiais-setores') %}active{% endif %}">
-                    <i class="fi fi-rr-building icon"></i><span>Variáveis</span>
+                    <span class="icon">👤</span><span>Usuarios</span>
                 </a>
             {% endif %}
-            <a href="/controle-cpus" class="{% if request.url.path.startswith('/controle-cpus') %}active{% endif %}">
-                <i class="fi fi-rr-desktop icon"></i><span>Controle de CPUs</span>
-            </a>
         </nav>
         {% if user %}
         <div class="sidebar-user">
