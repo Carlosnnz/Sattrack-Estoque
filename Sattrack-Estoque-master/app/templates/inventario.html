@@ -47,7 +47,14 @@
         <form method="post" action="/inventario/cadastrar" enctype="multipart/form-data" class="form-grid">
             <label>Código Interno<input name="codigo_interno" required></label>
             <label>Descrição<input name="descricao" required></label>
-            <label>Categoria<input name="categoria"></label>
+            <label>Categoria
+                <select name="categoria">
+                    <option value="">Selecione</option>
+                    {% for cat in categorias %}
+                        <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <label>Quantidade<input type="number" name="quantidade" min="0" value="0"></label>
             <label>Valor Unitário<input type="number" step="0.01" name="valor_unitario" value="0.00" required></label>
             <label>Localização<input name="localizacao"></label>
@@ -82,7 +89,12 @@
                                 <summary>Editar</summary>
                                 <form method="post" action="/items/{{ item.id }}/editar" enctype="multipart/form-data" class="form-grid">
                                     <input name="descricao" value="{{ item.descricao }}" required>
-                                    <input name="categoria" value="{{ item.categoria }}">
+                                    <select name="categoria">
+                                        <option value="">Selecione</option>
+        {% for cat in categorias %}
+            <option value="{{ cat }}" {% if item.categoria==cat %}selected{% endif %}>{{ cat }}</option>
+        {% endfor %}
+                                    </select>
                                     <input type="number" name="quantidade" value="{{ item.quantidade }}" required>
                                     <input type="number" step="0.01" name="valor_unitario" value="{{ item.valor_unitario }}" required>
                                     <input name="localizacao" value="{{ item.localizacao }}">

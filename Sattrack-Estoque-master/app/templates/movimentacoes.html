@@ -13,6 +13,14 @@
                 </select>
             </label>
             <label>Item<input name="item_nome" required></label>
+            <label>Categoria
+                <select name="categoria">
+                    <option value="">Selecione</option>
+                    {% for c in categorias_options %}
+                        <option value="{{ c }}">{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </label>
             <input type="hidden" name="destino" id="destino_compra_hidden">
             <label>Filial
                 <select id="filial_compra_select">
@@ -81,6 +89,14 @@
                 {% endfor %}
             </select>
         </label>
+        <label>Categoria
+            <select name="categoria">
+                <option value="" {% if not filtro_categoria %}selected{% endif %}>Todas</option>
+                {% for c in categorias_options %}
+                    <option value="{{ c }}" {% if filtro_categoria==c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
         <label>Item<input name="item" value="{{ filtro_item }}"></label>
         <label>Status
             <select name="status">
@@ -142,6 +158,12 @@
                                         {% endfor %}
                                     </select>
                                     <input name="item_nome" value="{{ mov.item_nome }}" required>
+                                    <select name="categoria">
+                                        <option value="">Selecione</option>
+                                        {% for c in categorias_options %}
+                                            <option value="{{ c }}" {% if mov.categoria==c %}selected{% endif %}>{{ c }}</option>
+                                        {% endfor %}
+                                    </select>
                                     <input name="destino" value="{{ mov.destino or '' }}">
                                     <input name="destinatario" value="{{ mov.destinatario }}" required>
                                     <input type="number" name="quantidade" value="{{ mov.quantidade }}" min="1" required>

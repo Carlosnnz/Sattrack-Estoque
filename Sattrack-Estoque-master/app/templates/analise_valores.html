@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Análise de Valores de Produtos{% endblock %}
+{% block content %}
+{% set color_map = {"low": "#16a34a", "mid": "#facc15", "high": "#dc2626", "na": "#e5e7eb"} %}
+{% set text_map = {"low": "#ffffff", "mid": "#1f2937", "high": "#ffffff", "na": "#374151"} %}
+<div class="grid two">
+    <div class="card">
+        <div class="card-header">Filtros</div>
+        <form method="get" action="/analise-valores" class="filters-grid">
+            <label>Categoria
+                <select name="categoria">
+                    <option value="">Todas</option>
+                    {% for c in categorias_options %}
+                        <option value="{{ c }}" {% if c==filtro_categoria %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Tipo
+                <select name="tipo">
+                    <option value="">Todos</option>
+                    {% for t in tipos_options %}
+                        <option value="{{ t }}" {% if t==filtro_tipo %}selected{% endif %}>{{ t }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Fornecedor
+                <input name="fornecedor" value="{{ filtro_fornecedor }}" placeholder="Buscar fornecedor">
+            </label>
+            <div class="inline-actions">
+                <button class="btn" type="submit">Filtrar</button>
+                <a class="btn secondary" href="/analise-valores">Limpar</a>
+            </div>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-header">Resumo geral</div>
+        <div class="grid stats">
+            {% for f in fornecedores %}
+            <div class="stat-card">
+                <p class="stat-label">{{ f.nome }}</p>
+                <div class="stat-value">{{ total_por_fornecedor.get(f.id, 0)|real }}</div>
+                <p class="stat-sub">
+                    {% if fornecedor_tem_preco.get(f.id) %}Com preços{% else %}Sem preços{% endif %}
+                </p>
+            </div>
+            {% else %}
+            <p>Nenhum fornecedor cadastrado.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="grid two">
+    <div class="card">
+        <div class="card-header">Adicionar item</div>
+        <form action="/analise-valores/itens/criar" method="post" class="form-grid">
+            <label>Peça
+                <input name="nome" required>
+            </label>
+            <label>Quantidade
+                <input type="number" name="quantidade" min="1" value="1" required>
+            </label>
+            <label>Categoria
+                <input name="categoria" placeholder="Ex: Hardware">
+            </label>
+            <label>Tipo
+                <input name="tipo" placeholder="Ex: Processador">
+            </label>
+            <label>Especificações
+                <textarea name="especificacao" placeholder="Modelo, voltagem, etc."></textarea>
+            </label>
+            <button class="btn" type="submit">Salvar item</button>
+        </form>
+    </div>
+    <div class="card">
+        <div class="card-header">Adicionar valor por fornecedor</div>
+        <form action="/analise-valores/valores/criar" method="post" enctype="multipart/form-data" class="form-grid">
+            <label>Fornecedor
+                <select name="fornecedor_id" required>
+                    <option value="">Selecione</option>
+                    {% for f in fornecedores_base %}
+                        <option value="{{ f.id }}">{{ f.nome }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Item
+                <select name="item_id" required>
+                    <option value="">Selecione</option>
+                    {% for i in itens %}
+                        <option value="{{ i.id }}">{{ i.nome }} ({{ i.quantidade }})</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label>Valor unitário
+                <input type="text" name="valor_unitario" placeholder="Ex: 529,00" required>
+            </label>
+            <label>Observação
+                <textarea name="observacao" placeholder="Prazo, frete, forma de pagamento..."></textarea>
+            </label>
+            <label>Anexar documento
+                <input type="file" name="documento" accept=".pdf,.jpg,.jpeg,.png">
+            </label>
+            <button class="btn" type="submit">Salvar valor</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Tabela comparativa</div>
+    <div class="table-responsive tabela-comparativa">
+        <table class="compare-table">
+            <thead>
+                <tr class="head-main">
+                    <th rowspan="2" class="sticky-col">Peça</th>
+                    <th rowspan="2" class="qty-col">Qtd</th>
+                    <th rowspan="2" class="spec-col">Especificações</th>
+                    <th rowspan="2" class="action-col">Ações</th>
+                    {% for f in fornecedores %}
+                        <th colspan="2" class="supplier-head">
+                            <div class="supplier-header">
+                                <span>{{ f.nome }}</span>
+                            </div>
+                        </th>
+                    {% endfor %}
+                </tr>
+                <tr class="head-sub">
+                    {% for f in fornecedores %}
+                        <th class="sub-unit">Valor unitário</th>
+                        <th class="sub-total">Total</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for linha in linhas %}
+                    <tr>
+                        <td class="sticky-col">
+                            <div class="peca-title">{{ linha.item.nome }}</div>
+                        </td>
+                        <td class="qty-col">{{ linha.item.quantidade }}</td>
+                        <td class="spec-col">{{ linha.item.especificacao or '-' }}</td>
+                        <td class="action-col">
+                            <form method="post" action="/analise-valores/itens/{{ linha.item.id }}/deletar" onsubmit="return confirm('Excluir esta peça e valores relacionados?');">
+                                <button class="btn danger" type="submit">Excluir</button>
+                            </form>
+                        </td>
+                        {% for cell in linha.cells %}
+                            {% set classe = cell.classe or 'na' %}
+                            <td class="unit-cell">
+                                <div class="price-chip" style="background: {{ color_map.get(classe, '#e5e7eb') }}; color: {{ text_map.get(classe, '#374151') }};">
+                                    {% if cell.valor %}
+                                        {{ cell.valor.valor_unitario|real }}
+                                    {% else %}
+                                        R$ 0,00
+                                    {% endif %}
+                                </div>
+                                {% if cell.valor %}
+                                    {% if cell.valor.documento %}<div class="cell-meta"><a href="{{ cell.valor.documento }}" target="_blank">Documento</a></div>{% endif %}
+                                    {% if cell.valor.observacao %}<div class="cell-meta">{{ cell.valor.observacao }}</div>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="total-cell">
+                                <div class="price-wrapper">
+                                    <div class="price-chip" style="background: {{ color_map.get(classe, '#e5e7eb') }}; color: {{ text_map.get(classe, '#374151') }};">
+                                        {% if cell.valor %}
+                                            {{ cell.valor.valor_total|real }}
+                                        {% else %}
+                                            R$ 0,00
+                                        {% endif %}
+                                    </div>
+                                    {% if cell.valor %}
+                                    <form method="post" action="/analise-valores/valores/{{ cell.valor.id }}/deletar" onsubmit="return confirm('Remover valor?');">
+                                        <button class="trash-btn" type="submit" title="Remover valor">
+                                            <i class="fi fi-rr-trash"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% else %}
+                    <tr><td colspan="{{ fornecedores|length * 2 + 4 }}">Nenhum item cadastrado.</td></tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td class="sticky-col total-label">Total</td>
+                    <td class="qty-col total-label">{{ quantidade_total }}</td>
+                    <td class="spec-col"></td>
+                    <td class="action-col"></td>
+                    {% for f in fornecedores %}
+                        <td class="unit-cell"></td>
+                        <td class="total-cell">
+                            {% set classe_total = total_classes.get(f.id, 'na') %}
+                            <div class="price-chip" style="background: {{ color_map.get(classe_total, '#e5e7eb') }}; color: {{ text_map.get(classe_total, '#374151') }};">
+                                {{ total_por_fornecedor.get(f.id, 0)|real }}
+                            </div>
+                        </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="grid two">
+    <div class="card">
+        <div class="card-header">Ranking de fornecedores</div>
+        <ul class="best-list">
+            {% for item in ranking %}
+                <li>
+                    <strong>{{ loop.index }}º</strong>
+                    <span class="best-arrow">-&gt;</span>
+                    <span class="best-supplier">{{ item.fornecedor.nome }}</span>
+                    <span class="badge">{{ item.total|real }}</span>
+                </li>
+            {% else %}
+                <li>Nenhum fornecedor informado.</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="card">
+        <div class="card-header">Resumo</div>
+        <p><strong>Fornecedor mais barato:</strong> {{ melhor_fornecedor_total.nome if melhor_fornecedor_total else '-' }}</p>
+        <p><strong>Fornecedor mais caro:</strong> {{ pior_fornecedor_total.nome if pior_fornecedor_total else '-' }}</p>
+        <p class="cell-meta">Cores: verde = menor preço, amarelo = intermediário, vermelho = maior preço, cinza = sem preço.</p>
+    </div>
+</div>
+{% endblock %}

@@ -138,6 +138,54 @@ class Fornecedor(Base):
     nome = Column(String, unique=True, nullable=False, index=True)
 
 
+class Categoria(Base):
+    __tablename__ = "categorias"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False, index=True)
+
+
+class AnaliseFornecedor(Base):
+    __tablename__ = "analise_fornecedores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, unique=True, nullable=False)
+    observacao = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    valores = relationship("AnaliseValor", back_populates="fornecedor", cascade="all, delete-orphan")
+
+
+class AnaliseItem(Base):
+    __tablename__ = "analise_itens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, nullable=False)
+    quantidade = Column(Integer, nullable=False, default=1)
+    especificacao = Column(String, nullable=True)
+    categoria = Column(String, nullable=True)
+    tipo = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    valores = relationship("AnaliseValor", back_populates="item", cascade="all, delete-orphan")
+
+
+class AnaliseValor(Base):
+    __tablename__ = "analise_valores"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fornecedor_id = Column(Integer, ForeignKey("analise_fornecedores.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("analise_itens.id"), nullable=False)
+    valor_unitario = Column(Float, nullable=False, default=0.0)
+    valor_total = Column(Float, nullable=False, default=0.0)
+    observacao = Column(String, nullable=True)
+    documento = Column(String, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    fornecedor = relationship("AnaliseFornecedor", back_populates="valores")
+    item = relationship("AnaliseItem", back_populates="valores")
+
+
 class CPU(Base):
     __tablename__ = "cpus"
 
@@ -161,6 +209,7 @@ class Compra(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     fornecedor = Column(String, nullable=False)
+    categoria = Column(String, nullable=True)
     item_nome = Column(String, nullable=False)
     destino = Column(String, nullable=True)
     quantidade = Column(Integer, nullable=False, default=0)
@@ -224,6 +273,7 @@ def ensure_compras_schema():
                     CREATE TABLE IF NOT EXISTS compras (
                         id INTEGER PRIMARY KEY,
                         fornecedor TEXT NOT NULL,
+                        categoria TEXT,
                         item_nome TEXT NOT NULL,
                         destino TEXT,
                         destinatario TEXT NOT NULL DEFAULT '',
@@ -249,6 +299,8 @@ def ensure_compras_schema():
                 conn.execute(text("ALTER TABLE compras ADD COLUMN foto TEXT"))
             if "entrada_gerada" not in cols:
                 conn.execute(text("ALTER TABLE compras ADD COLUMN entrada_gerada INTEGER NOT NULL DEFAULT 0"))
+            if "categoria" not in cols:
+                conn.execute(text("ALTER TABLE compras ADD COLUMN categoria TEXT"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS idx_compras_status ON compras(status)"))
 
 
@@ -307,6 +359,17 @@ def ensure_filiais_setores_schema():
             )
         )
         conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_fornecedores_nome ON fornecedores(nome);"))
+        conn.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS categorias (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT UNIQUE NOT NULL
+                );
+                """
+            )
+        )
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_categorias_nome ON categorias(nome);"))
 
 
 def ensure_cpu_schema():
@@ -477,6 +540,87 @@ def record_audit_cpu(db: Session, operacao: str, usuario: str, antes: Optional[d
     db.commit()
 
 
+def parse_price_to_float(raw_value: Optional[str]) -> float:
+    if raw_value is None:
+        return 0.0
+    if isinstance(raw_value, (int, float)):
+        return float(raw_value)
+    cleaned = str(raw_value).replace("R$", "").replace(" ", "").replace("\u00a0", "")
+    cleaned = cleaned.replace(".", "").replace(",", ".")
+    try:
+        return float(cleaned)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Valor de preço inválido")
+
+
+def classify_price(total: Optional[float], minimo: Optional[float], maximo: Optional[float]) -> str:
+    if total is None or total <= 0:
+        return "na"
+    if minimo is None:
+        return "mid"
+    if maximo is not None and abs(maximo - minimo) < 1e-6:
+        return "low"
+    if abs(total - (minimo or 0)) < 1e-6:
+        return "low"
+    if maximo is not None and abs(total - maximo) < 1e-6:
+        return "high"
+    return "mid"
+
+
+def build_valores_map(valores: List["AnaliseValor"]):
+    mapa: Dict[tuple, AnaliseValor] = {}
+    for val in valores:
+        mapa[(val.item_id, val.fornecedor_id)] = val
+    return mapa
+
+
+def calcular_comparativo(
+    itens: List["AnaliseItem"], fornecedores: List["AnaliseFornecedor"], valores_map: Dict[tuple, "AnaliseValor"]
+):
+    linhas = []
+    total_por_fornecedor: Dict[int, float] = {f.id: 0.0 for f in fornecedores}
+    fornecedor_tem_preco: Dict[int, bool] = {f.id: False for f in fornecedores}
+
+    for item in itens:
+        totais_item: List[float] = []
+        for forn in fornecedores:
+            val = valores_map.get((item.id, forn.id))
+            if val and val.valor_total and val.valor_total > 0:
+                totais_item.append(val.valor_total)
+        minimo = min(totais_item) if totais_item else None
+        maximo = max(totais_item) if totais_item else None
+
+        cells = []
+        for forn in fornecedores:
+            val = valores_map.get((item.id, forn.id))
+            total = val.valor_total if val else None
+            classe = classify_price(total, minimo, maximo)
+            cells.append({"fornecedor": forn, "valor": val, "classe": classe})
+            if total and total > 0:
+                total_por_fornecedor[forn.id] += total
+                fornecedor_tem_preco[forn.id] = True
+
+        linhas.append({"item": item, "cells": cells, "minimo": minimo, "maximo": maximo})
+
+    ranking = [
+        {
+            "fornecedor": f,
+            "total": total_por_fornecedor.get(f.id, 0.0),
+            "tem_preco": fornecedor_tem_preco.get(f.id),
+        }
+        for f in fornecedores
+        if fornecedor_tem_preco.get(f.id) and total_por_fornecedor.get(f.id, 0.0) > 0
+    ]
+    ranking = sorted(ranking, key=lambda x: x["total"])
+    melhor = None
+    pior = None
+    if ranking:
+        melhor = ranking[0]["fornecedor"]
+        pior = ranking[-1]["fornecedor"]
+
+    return linhas, total_por_fornecedor, fornecedor_tem_preco, melhor, pior
+
+
 def save_uploaded_file(upload: Optional[UploadFile], folder: str, allow_pdf: bool = False) -> Optional[str]:
     if not upload or not upload.filename:
         return None
@@ -494,7 +638,14 @@ def save_uploaded_file(upload: Optional[UploadFile], folder: str, allow_pdf: boo
     return f"/static/{folder}/{filename}"
 
 
-def find_or_create_item_for_compra(db: Session, nome: str, custo_unitario: float, user_label: str) -> Item:
+def find_or_create_item_for_compra(
+    db: Session,
+    nome: str,
+    custo_unitario: float,
+    user_label: str,
+    categoria: Optional[str] = None,
+    foto: Optional[str] = None,
+) -> Item:
     nome_norm = nome.strip()
     candidatos = db.query(Item).filter(func.lower(Item.descricao) == nome_norm.lower()).all()
 
@@ -507,8 +658,17 @@ def find_or_create_item_for_compra(db: Session, nome: str, custo_unitario: float
 
     for it in candidatos:
         if custo_igual(it):
+            updated = False
+            if categoria and (not it.categoria or it.categoria.lower() == "sem categoria"):
+                it.categoria = categoria
+                updated = True
+            if foto and not it.foto:
+                it.foto = foto
+                updated = True
             if custo_unitario and it.valor_unitario != custo_unitario:
                 it.valor_unitario = custo_unitario
+                updated = True
+            if updated:
                 db.commit()
             return it
 
@@ -521,10 +681,11 @@ def find_or_create_item_for_compra(db: Session, nome: str, custo_unitario: float
     item = Item(
         codigo_interno=codigo,
         descricao=nome,
-        categoria="Sem Categoria",
+        categoria=categoria or "Sem Categoria",
         quantidade=0,
         valor_unitario=custo_unitario or 0.0,
         localizacao="Almoxarifado",
+        foto=foto,
     )
     db.add(item)
     db.commit()
@@ -535,7 +696,14 @@ def find_or_create_item_for_compra(db: Session, nome: str, custo_unitario: float
 def process_entrega_compra(db: Session, compra: Compra, user_label: str):
     if compra.entrada_gerada:
         return
-    item = find_or_create_item_for_compra(db, compra.item_nome, compra.custo_unitario, user_label)
+    item = find_or_create_item_for_compra(
+        db,
+        compra.item_nome,
+        compra.custo_unitario,
+        user_label,
+        categoria=compra.categoria,
+        foto=compra.foto,
+    )
     item.quantidade += compra.quantidade
     if compra.custo_unitario:
         item.valor_unitario = compra.custo_unitario
@@ -664,23 +832,21 @@ def dashboard_estoque(db: Session = Depends(get_db), user=Depends(require_user))
 
 @app.get("/api/dashboard/fluxo")
 def dashboard_fluxo(db: Session = Depends(get_db), user=Depends(require_user)):
-    hoje = datetime.datetime.utcnow().date()
+    hoje = datetime.date.today()
     labels: List[str] = []
     entradas: List[int] = []
     saidas: List[int] = []
     for i in range(6, -1, -1):
         dia = hoje - datetime.timedelta(days=i)
-        inicio = datetime.datetime.combine(dia, datetime.time.min)
-        fim = inicio + datetime.timedelta(days=1)
         total_entradas = (
             db.query(func.coalesce(func.sum(Entrada.quantidade), 0))
-            .filter(Entrada.created_at >= inicio, Entrada.created_at < fim)
+            .filter(func.date(Entrada.created_at) == dia.isoformat())
             .scalar()
             or 0
         )
         total_saidas = (
             db.query(func.coalesce(func.sum(Saida.quantidade), 0))
-            .filter(Saida.created_at >= inicio, Saida.created_at < fim)
+            .filter(func.date(Saida.created_at) == dia.isoformat())
             .scalar()
             or 0
         )
@@ -974,9 +1140,18 @@ def filiais_setores_page(request: Request, db: Session = Depends(get_db), user=D
     filiais = db.query(Filial).order_by(Filial.nome).all()
     setores = db.query(Setor).order_by(Setor.nome).all()
     fornecedores = db.query(Fornecedor).order_by(Fornecedor.nome).all()
+    categorias = db.query(Categoria).order_by(Categoria.nome).all()
     return templates.TemplateResponse(
         "filiais_setores.html",
-        {"request": request, "user": user, "filiais": filiais, "setores": setores, "fornecedores": fornecedores, "erro": request.query_params.get("erro")},
+        {
+            "request": request,
+            "user": user,
+            "filiais": filiais,
+            "setores": setores,
+            "fornecedores": fornecedores,
+            "categorias": categorias,
+            "erro": request.query_params.get("erro"),
+        },
     )
 
 
@@ -1051,6 +1226,208 @@ def deletar_fornecedor(fornecedor_id: int, db: Session = Depends(get_db), user=D
     record_audit(db, "deletar_fornecedor", None, None, actor, fornecedor=fornecedor.nome)
     return RedirectResponse(url="/filiais-setores", status_code=303)
 
+# Análise de Valores de Produtos
+@app.post("/categorias/criar", include_in_schema=False)
+def criar_categoria(nome: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    if db.query(Categoria).filter(func.lower(Categoria.nome) == nome.lower()).first():
+        return RedirectResponse(url="/filiais-setores?erro=categoria", status_code=303)
+    nova = Categoria(nome=nome)
+    db.add(nova)
+    db.commit()
+    record_audit(db, "criar_categoria", None, None, actor, fornecedor=nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+@app.post("/categorias/{categoria_id}/deletar", include_in_schema=False)
+def deletar_categoria(categoria_id: int, db: Session = Depends(get_db), user=Depends(require_admin)):
+    actor = get_actor(user)
+    cat = db.get(Categoria, categoria_id)
+    if not cat:
+        raise HTTPException(status_code=404, detail="Categoria nǜo encontrada")
+    db.delete(cat)
+    db.commit()
+    record_audit(db, "deletar_categoria", None, None, actor, fornecedor=cat.nome)
+    return RedirectResponse(url="/filiais-setores", status_code=303)
+
+@app.get("/analise-valores", include_in_schema=False)
+def analise_valores_page(
+    request: Request,
+    categoria: str = "",
+    tipo: str = "",
+    fornecedor: str = "",
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    itens_query = db.query(AnaliseItem)
+    if categoria:
+        itens_query = itens_query.filter(AnaliseItem.categoria.ilike(f"%{categoria}%"))
+    if tipo:
+        itens_query = itens_query.filter(AnaliseItem.tipo.ilike(f"%{tipo}%"))
+    itens = itens_query.order_by(AnaliseItem.nome).all()
+
+    fornecedores_base = db.query(Fornecedor).order_by(Fornecedor.nome).all()
+    # garante espelho em analise_fornecedores a partir de fornecedores base
+    fornecedores_map: Dict[int, AnaliseFornecedor] = {}
+    for f in fornecedores_base:
+        existente = db.query(AnaliseFornecedor).filter(func.lower(AnaliseFornecedor.nome) == f.nome.lower()).first()
+        if not existente:
+            existente = AnaliseFornecedor(nome=f.nome)
+            db.add(existente)
+            db.commit()
+        fornecedores_map[f.id] = existente
+    fornecedores_view = [fornecedores_map[f.id] for f in fornecedores_base if (not fornecedor or fornecedor.lower() in f.nome.lower())]
+
+    valores = db.query(AnaliseValor).all()
+    valores_map = build_valores_map(valores)
+
+    linhas, total_por_fornecedor, fornecedor_tem_preco, melhor, pior = calcular_comparativo(
+        itens, fornecedores_view, valores_map
+    )
+    ranking = [
+        {
+            "fornecedor": f,
+            "total": total_por_fornecedor.get(f.id, 0.0),
+            "tem_preco": fornecedor_tem_preco.get(f.id),
+        }
+        for f in fornecedores_view
+        if fornecedor_tem_preco.get(f.id) and total_por_fornecedor.get(f.id, 0.0) > 0
+    ]
+    ranking = sorted(ranking, key=lambda x: x["total"])
+    melhor = ranking[0]["fornecedor"] if ranking else None
+    pior = ranking[-1]["fornecedor"] if ranking else None
+    totais_validos = [total_por_fornecedor.get(f.id, 0.0) for f in fornecedores_view if fornecedor_tem_preco.get(f.id) and total_por_fornecedor.get(f.id, 0.0) > 0]
+    min_total = min(totais_validos) if totais_validos else None
+    max_total = max(totais_validos) if totais_validos else None
+    total_classes = {f.id: classify_price(total_por_fornecedor.get(f.id), min_total, max_total) for f in fornecedores_view}
+    quantidade_total = sum(i.quantidade or 0 for i in itens)
+    categorias_options = [
+        row[0] for row in db.query(AnaliseItem.categoria).filter(AnaliseItem.categoria.isnot(None)).distinct()
+    ]
+    tipos_options = [row[0] for row in db.query(AnaliseItem.tipo).filter(AnaliseItem.tipo.isnot(None)).distinct()]
+
+    return templates.TemplateResponse(
+        "analise_valores.html",
+        {
+            "request": request,
+            "user": user,
+            "itens": itens,
+            "fornecedores": fornecedores_view,
+            "fornecedores_base": fornecedores_base,
+            "valores_map": valores_map,
+            "linhas": linhas,
+            "total_por_fornecedor": total_por_fornecedor,
+            "fornecedor_tem_preco": fornecedor_tem_preco,
+            "melhor_fornecedor_total": melhor,
+            "pior_fornecedor_total": pior,
+            "ranking": ranking,
+            "min_total": min_total,
+            "max_total": max_total,
+            "total_classes": total_classes,
+            "quantidade_total": quantidade_total,
+            "categorias_options": categorias_options,
+            "tipos_options": tipos_options,
+            "filtro_categoria": categoria,
+            "filtro_tipo": tipo,
+            "filtro_fornecedor": fornecedor,
+        },
+    )
+
+
+@app.post("/analise-valores/itens/criar", include_in_schema=False)
+def analise_item_criar(
+    nome: str = Form(...),
+    quantidade: int = Form(...),
+    especificacao: str = Form(""),
+    categoria: str = Form(""),
+    tipo: str = Form(""),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    actor = get_actor(user)
+    novo = AnaliseItem(
+        nome=nome.strip(),
+        quantidade=max(1, quantidade),
+        especificacao=especificacao,
+        categoria=categoria or None,
+        tipo=tipo or None,
+    )
+    db.add(novo)
+    db.commit()
+    record_audit(db, "analise_criar_item", novo.id, quantidade, actor)
+    return RedirectResponse(url="/analise-valores", status_code=303)
+
+
+@app.post("/analise-valores/itens/{item_id}/deletar", include_in_schema=False)
+def analise_item_deletar(item_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    actor = get_actor(user)
+    item = db.get(AnaliseItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    nome_item = item.nome
+    db.delete(item)
+    db.commit()
+    record_audit(db, "analise_deletar_item", item_id, None, actor, fornecedor=nome_item)
+    return RedirectResponse(url="/analise-valores", status_code=303)
+
+
+@app.post("/analise-valores/valores/criar", include_in_schema=False)
+def analise_valor_criar(
+    fornecedor_id: int = Form(...),
+    item_id: int = Form(...),
+    valor_unitario: str = Form(...),
+    observacao: str = Form(""),
+    documento: UploadFile = File(None),
+    db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    actor = get_actor(user)
+    fornecedor_base = db.get(Fornecedor, fornecedor_id)
+    item = db.get(AnaliseItem, item_id)
+    if not fornecedor_base or not item:
+        raise HTTPException(status_code=404, detail="Fornecedor ou item não encontrado")
+    fornecedor_obj = db.query(AnaliseFornecedor).filter(func.lower(AnaliseFornecedor.nome) == fornecedor_base.nome.lower()).first()
+    if not fornecedor_obj:
+        fornecedor_obj = AnaliseFornecedor(nome=fornecedor_base.nome)
+        db.add(fornecedor_obj)
+        db.commit()
+    valor_unitario_float = parse_price_to_float(valor_unitario)
+    valor_total = round(valor_unitario_float * (item.quantidade or 0), 2)
+    doc_path = save_uploaded_file(documento, f"uploads/analise_valores/{item_id}", allow_pdf=True)
+    novo = AnaliseValor(
+        fornecedor_id=fornecedor_obj.id,
+        item_id=item.id,
+        valor_unitario=valor_unitario_float,
+        valor_total=valor_total,
+        observacao=observacao,
+        documento=doc_path,
+    )
+    db.add(novo)
+    db.commit()
+    record_audit(
+        db,
+        "analise_valor_criar",
+        item.id,
+        item.quantidade,
+        actor,
+        fornecedor=fornecedor_obj.nome,
+        custo=valor_unitario_float,
+    )
+    return RedirectResponse(url="/analise-valores", status_code=303)
+
+
+@app.post("/analise-valores/valores/{valor_id}/deletar", include_in_schema=False)
+def analise_valor_deletar(valor_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    actor = get_actor(user)
+    valor = db.get(AnaliseValor, valor_id)
+    if not valor:
+        raise HTTPException(status_code=404, detail="Valor não encontrado")
+    fornecedor_nome = valor.fornecedor.nome if valor.fornecedor else None
+    item_rel = valor.item_id
+    db.delete(valor)
+    db.commit()
+    record_audit(db, "analise_valor_deletar", item_rel, None, actor, fornecedor=fornecedor_nome)
+    return RedirectResponse(url="/analise-valores", status_code=303)
+
 # Inventory pages
 @app.get("/inventario", include_in_schema=False)
 def inventory_page(
@@ -1076,7 +1453,7 @@ def inventory_page(
             item_relacionado = db.get(Item, int(erro_item_id))
         except Exception:
             item_relacionado = None
-    categorias = [row[0] for row in db.query(Item.categoria).filter(Item.categoria.isnot(None)).distinct().order_by(Item.categoria)]
+    categorias = [c.nome for c in db.query(Categoria).order_by(Categoria.nome).all()]
     return templates.TemplateResponse(
         "inventario.html",
         {
@@ -1534,6 +1911,7 @@ def handle_entrega_if_needed(db: Session, compra: Compra, actor: str):
 @app.post("/compras/criar", include_in_schema=False)
 async def compras_criar(
     fornecedor: str = Form(...),
+    categoria: str = Form(""),
     item_nome: str = Form(...),
     destino: str = Form(""),
     destinatario: str = Form(...),
@@ -1550,6 +1928,7 @@ async def compras_criar(
     status_norm = status.lower()
     compra = Compra(
         fornecedor=fornecedor,
+        categoria=categoria or None,
         item_nome=item_nome,
         destino=destino,
         destinatario=destinatario,
@@ -1588,6 +1967,7 @@ async def compras_criar(
 async def compras_editar(
     compra_id: int,
     fornecedor: str = Form(...),
+    categoria: str = Form(""),
     item_nome: str = Form(...),
     destino: str = Form(""),
     destinatario: str = Form(...),
@@ -1605,6 +1985,7 @@ async def compras_editar(
     if not compra:
         raise HTTPException(status_code=404, detail="Compra nao encontrada")
     compra.fornecedor = fornecedor
+    compra.categoria = categoria or None
     compra.item_nome = item_nome
     compra.destino = destino
     compra.destinatario = destinatario
@@ -1663,6 +2044,7 @@ def movimentacoes_page(
     request: Request,
     tipo: str = "",
     fornecedor: str = "",
+    categoria: str = "",
     item: str = "",
     status: str = "",
     destinatario: str = "",
@@ -1674,9 +2056,12 @@ def movimentacoes_page(
     compras_query = db.query(Compra)
     entradas_query = db.query(Entrada)
     fornecedores_options = [f.nome for f in db.query(Fornecedor).order_by(Fornecedor.nome).all()]
+    categorias_options = [c.nome for c in db.query(Categoria).order_by(Categoria.nome).all()]
 
     if fornecedor:
         compras_query = compras_query.filter(Compra.fornecedor.ilike(f"%{fornecedor}%"))
+    if categoria:
+        compras_query = compras_query.filter(Compra.categoria.ilike(f"%{categoria}%"))
     if item:
         compras_query = compras_query.filter(Compra.item_nome.ilike(f"%{item}%"))
         entradas_query = entradas_query.join(Item).filter(Item.descricao.ilike(f"%{item}%"))
@@ -1724,6 +2109,7 @@ def movimentacoes_page(
                 {
                     "tipo": "Compra",
                     "item_nome": c.item_nome,
+                    "categoria": c.categoria,
                     "quantidade": c.quantidade,
                     "destinatario": c.destinatario,
                     "usuario": c.usuario,
@@ -1781,6 +2167,7 @@ def movimentacoes_page(
             "movimentos": movimentos,
             "filtro_tipo": tipo,
             "filtro_fornecedor": fornecedor,
+            "filtro_categoria": categoria,
             "filtro_item": item,
             "filtro_status": status,
             "filtro_destinatario": destinatario,
@@ -1788,6 +2175,7 @@ def movimentacoes_page(
             "filiais_options": filiais_options,
             "setores_options": setores_options,
             "fornecedores_options": fornecedores_options,
+            "categorias_options": categorias_options,
         },
     )
 
@@ -1976,7 +2364,17 @@ def format_datetime(value: Optional[datetime.datetime]):
     return value.strftime("%d/%m/%Y %H:%M")
 
 
+def format_currency(value: Optional[float]):
+    if value is None:
+        return "-"
+    try:
+        return ("R$ {:,.2f}".format(float(value))).replace(",", "X").replace(".", ",").replace("X", ".")
+    except Exception:
+        return f"R$ {value}"
+
+
 templates.env.filters["datetime"] = format_datetime
+templates.env.filters["real"] = format_currency
 
 
 @app.get("/login", include_in_schema=False)

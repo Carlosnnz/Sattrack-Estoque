@@ -5,10 +5,10 @@
     <div class="card-header">Cadastro de Variáveis</div>
     {% if erro %}
         <div class="alert error">
-            {% if erro == 'filial' %}Filial já existe.{% elif erro == 'setor' %}Setor já existe.{% elif erro == 'fornecedor' %}Fornecedor já existe.{% else %}Erro ao salvar.{% endif %}
+            {% if erro == 'filial' %}Filial já existe.{% elif erro == 'setor' %}Setor já existe.{% elif erro == 'fornecedor' %}Fornecedor já existe.{% elif erro == 'categoria' %}Categoria já existe.{% else %}Erro ao salvar.{% endif %}
         </div>
     {% endif %}
-    <div class="grid three">
+    <div class="grid four">
         <div class="card">
             <div class="card-header">Filiais</div>
             <form method="post" action="/filiais/criar" class="inline-actions">
@@ -82,6 +82,32 @@
                         </tr>
                         {% else %}
                         <tr><td colspan="2">Nenhum fornecedor cadastrado.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">Categorias</div>
+            <form method="post" action="/categorias/criar" class="inline-actions">
+                <input name="nome" placeholder="Nova categoria" required>
+                <button class="btn" type="submit">Adicionar</button>
+            </form>
+            <div class="table-responsive" style="margin-top:10px;">
+                <table>
+                    <thead><tr><th>Categoria</th><th>Ações</th></tr></thead>
+                    <tbody>
+                        {% for c in categorias %}
+                        <tr>
+                            <td>{{ c.nome }}</td>
+                            <td>
+                                <form method="post" action="/categorias/{{ c.id }}/deletar" onsubmit="return confirm('Excluir categoria?');">
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2">Nenhuma categoria cadastrada.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

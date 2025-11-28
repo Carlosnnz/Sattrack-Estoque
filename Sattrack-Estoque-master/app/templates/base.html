@@ -26,30 +26,34 @@
                 <i class="fi fi-rr-chart-histogram icon"></i><span>Painel</span>
             </a>
             <a href="/inventario" class="{% if request.url.path.startswith('/inventario') %}active{% endif %}">
-                <i class="fi fi-rr-briefcase icon"></i><span>Inventário</span>
+                <i class="fi fi-rr-briefcase icon"></i><span>Inventario</span>
             </a>
             <a href="/movimentacoes/entradas" class="{% if request.url.path.startswith('/movimentacoes') %}active{% endif %}">
                 <i class="fi fi-rs-shopping-cart icon"></i><span>Compras</span>
-            </a>            <a href="/saidas" class="{% if request.url.path.startswith('/saidas') %}active{% endif %}">
-                <i class="fi fi-rs-paper-plane icon"></i><span>Saídas</span>
+            </a>
+            <a href="/analise-valores" class="{% if request.url.path.startswith('/analise-valores') %}active{% endif %}">
+                <i class="fi fi-rr-badge-percent icon"></i><span>Analise de Valores</span>
+            </a>
+            <a href="/saidas" class="{% if request.url.path.startswith('/saidas') %}active{% endif %}">
+                <i class="fi fi-rs-paper-plane icon"></i><span>Saidas</span>
             </a>
             <a href="/transferencias" class="{% if request.url.path.startswith('/transferencias') %}active{% endif %}">
-                <i class="fi fi-rr-arrow-right icon"></i><span>Transferências</span>
+                <i class="fi fi-rr-arrow-right icon"></i><span>Transferencias</span>
+            </a>
+            <a href="/filiais-setores" class="{% if request.url.path.startswith('/filiais-setores') %}active{% endif %}">
+                <i class="fi fi-rr-building icon"></i><span>Variaveis</span>
+            </a>
+            <a href="/controle-cpus" class="{% if request.url.path.startswith('/controle-cpus') %}active{% endif %}">
+                <i class="fi fi-rs-computer icon"></i><span>Controle de CPUs</span>
             </a>
             {% if user and user.funcao == "admin" %}
                 <a href="/auditoria" class="{% if request.url.path.startswith('/auditoria') %}active{% endif %}">
                     <i class="fi fi-rs-edit icon"></i><span>Auditoria</span>
                 </a>
                 <a href="/usuarios" class="{% if request.url.path.startswith('/usuarios') %}active{% endif %}">
-                    <i class="fi fi-rr-user icon"></i><span>Usuários</span>
-                </a>
-                <a href="/filiais-setores" class="{% if request.url.path.startswith('/filiais-setores') %}active{% endif %}">
-                    <i class="fi fi-rr-building icon"></i><span>Variáveis</span>
+                    <i class="fi fi-rr-user icon"></i><span>Usuarios</span>
                 </a>
             {% endif %}
-            <a href="/controle-cpus" class="{% if request.url.path.startswith('/controle-cpus') %}active{% endif %}">
-                <i class="fi fi-rr-desktop icon"></i><span>Controle de CPUs</span>
-            </a>
         </nav>
         {% if user %}
         <div class="sidebar-user">
