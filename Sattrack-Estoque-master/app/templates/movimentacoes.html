@@ -209,5 +209,23 @@
             </tbody>
         </table>
     </div>
+    <div class="inline-actions" style="justify-content: space-between; margin-top: 12px; flex-wrap: wrap;">
+        <div>Total: {{ total }} movimentacoes</div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+            {% set prev_page = page - 1 %}
+            {% set next_page = page + 1 %}
+            {% if page > 1 %}
+                <a class="btn secondary" href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ prev_page }}">Anterior</a>
+            {% else %}
+                <span class="badge">Anterior</span>
+            {% endif %}
+            <span>Pagina {{ page }} / {{ total_pages }}</span>
+            {% if page < total_pages %}
+                <a class="btn secondary" href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ next_page }}">Proxima</a>
+            {% else %}
+                <span class="badge">Proxima</span>
+            {% endif %}
+        </div>
+    </div>
 </div>
 {% endblock %}

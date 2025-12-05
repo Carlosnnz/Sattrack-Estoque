@@ -5,11 +5,11 @@
     <div class="card-header">
         <div>
             <h2 style="margin:0;">Controle de CPUs</h2>
-            <p style="margin:4px 0 0;color:var(--muted);">Gerenciamento dos computadores por setor, filial e especificações técnicas.</p>
+            <p style="margin:4px 0 0;color:var(--muted);">Gerenciamento dos computadores por setor, filial e especificacoes tecnicas.</p>
         </div>
     </div>
     {% if erro == 'tag' %}
-        <div class="alert error">TAG já existe. Use um código de patrimônio único.</div>
+        <div class="alert error">TAG ja existe. Use um codigo de patrimonio unico.</div>
     {% endif %}
     <div class="grid stats" style="margin-bottom:12px;">
         <div class="card stat-card">
@@ -27,7 +27,7 @@
         {% for filial, total in filial_counts.items() %}
             <div class="card stat-card">
                 <p class="stat-label" style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;"><i class="fi fi-rr-layers"></i><span>{{ filial }}</span></p>
-                <div class="stat-value">{{ total }} máquinas</div>
+                <div class="stat-value">{{ total }} maquinas</div>
             </div>
         {% endfor %}
     </div>
@@ -53,8 +53,8 @@
             </label>
             <label>TAG<input name="tag" placeholder="SAT-43021" required></label>
             <label>Processador<input name="processador" placeholder="AMD 3000G, i5-10400" required></label>
-            <label>Memória RAM<input name="memoria_ram" placeholder="8 GB, 16 GB" required></label>
-            <label>Placa de Vídeo<input name="placa_video" placeholder="Integrada, GTX 1050" required></label>
+            <label>Memoria RAM<input name="memoria_ram" placeholder="8 GB, 16 GB" required></label>
+            <label>Placa de Video<input name="placa_video" placeholder="Integrada, GTX 1050" required></label>
             <label>Categoria
                 <select name="categoria" required>
                     <option value="NOVA-FORTE">NOVA-FORTE</option>
@@ -63,7 +63,7 @@
                 </select>
             </label>
             <label>Anydesk<input name="anydesk" required></label>
-            <label>Observações
+            <label>Observacoes
                 <textarea name="observacoes" placeholder="Opcional"></textarea>
             </label>
             <div class="inline-actions">
@@ -75,6 +75,8 @@
     <div class="card" style="margin-bottom:12px;">
         <div class="card-header">Filtros</div>
         <form method="get" action="/controle-cpus" class="filters-grid">
+            <input type="hidden" name="sort" value="{{ filtro_sort }}">
+            <input type="hidden" name="dir" value="{{ filtro_dir }}">
             <label>Setor
                 <select name="setor">
                     <option value="" {% if not filtro_setor %}selected{% endif %}>Todos</option>
@@ -112,11 +114,24 @@
     <div class="table-responsive">
         <table>
             <thead>
+                {% set base_params = 'setor=' ~ filtro_setor ~ '&filial=' ~ filtro_filial ~ '&categoria=' ~ filtro_categoria ~ '&nome=' ~ filtro_nome ~ '&tag=' ~ filtro_tag ~ '&busca=' ~ filtro_busca %}
+                {% set dir_nome = 'desc' if filtro_sort == 'nome' and filtro_dir == 'asc' else 'asc' %}
+                {% set dir_tag = 'desc' if filtro_sort == 'tag' and filtro_dir == 'asc' else 'asc' %}
                 <tr>
-                    <th>Nome</th>
+                    <th>
+                        <a class="sortable {% if filtro_sort == 'nome' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=nome&dir={{ dir_nome }}">
+                            Nome
+                            <span class="caret">{% if filtro_sort == "nome" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
+                        </a>
+                    </th>
                     <th>Setor</th>
                     <th>Filial</th>
-                    <th>TAG</th>
+                    <th>
+                        <a class="sortable {% if filtro_sort == 'tag' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=tag&dir={{ dir_tag }}">
+                            TAG
+                            <span class="caret">{% if filtro_sort == "tag" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
+                        </a>
+                    </th>
                     <th>Processador</th>
                     <th>Memória RAM</th>
                     <th>Placa de Vídeo</th>
@@ -182,16 +197,17 @@
         <div style="display:flex; gap:8px; align-items:center;">
             {% set prev_page = page - 1 %}
             {% set next_page = page + 1 %}
+            {% set sort_params = '&sort=' ~ filtro_sort ~ '&dir=' ~ filtro_dir %}
             {% if page > 1 %}
-                <a class="btn secondary" href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}&page={{ prev_page }}">Anterior</a>
+                <a class="btn secondary" href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ prev_page }}">Anterior</a>
             {% else %}
                 <span class="badge">Anterior</span>
             {% endif %}
-            <span>Página {{ page }} / {{ total_pages }}</span>
+            <span>Pagina {{ page }} / {{ total_pages }}</span>
             {% if page < total_pages %}
-                <a class="btn secondary" href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}&page={{ next_page }}">Próxima</a>
+                <a class="btn secondary" href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ next_page }}">Proxima</a>
             {% else %}
-                <span class="badge">Próxima</span>
+                <span class="badge">Proxima</span>
             {% endif %}
         </div>
     </div>

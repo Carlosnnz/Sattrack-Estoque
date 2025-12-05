@@ -1,6 +1,8 @@
 import datetime
 import json
 import uuid
+import os
+import math
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -11,19 +13,33 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, func, text
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, func, text, or_, cast
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 # Database setup
-DATABASE_URL = "sqlite:///./sattrack.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+def _get_database_url() -> str:
+    env_url = os.getenv("DATABASE_URL")
+    if env_url:
+        return env_url
+    db_file = os.getenv("DATABASE_FILE")
+    if db_file:
+        return f"sqlite:///{Path(db_file)}"
+    return "sqlite:///./sattrack.db"
+
+
+DATABASE_URL = _get_database_url()
+connect_args = {"check_same_thread": False} if DATABASE_URL.lower().startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
 SESSION_STORE: Dict[str, Dict[str, str]] = {}
-DEFAULT_ADMIN_EMAIL = "admin@sattrack.local"
-DEFAULT_ADMIN_PASSWORD = "admin"
-LOW_STOCK_THRESHOLD = 5
+DEFAULT_ADMIN_EMAIL = os.getenv("DEFAULT_ADMIN_EMAIL", "admin@sattrack.local")
+DEFAULT_ADMIN_PASSWORD = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin")
+try:
+    LOW_STOCK_THRESHOLD = int(os.getenv("LOW_STOCK_THRESHOLD", "5"))
+except Exception:
+    LOW_STOCK_THRESHOLD = 5
 
 
 class Item(Base):
@@ -935,6 +951,8 @@ def controle_cpus_page(
     nome: str = "",
     tag: str = "",
     busca: str = "",
+    sort: str = "nome",
+    dir: str = "asc",
     page: int = 1,
     db: Session = Depends(get_db),
     user=Depends(require_user),
@@ -955,16 +973,22 @@ def controle_cpus_page(
         query = query.filter(
             CPU.nome.ilike(busca_like) | CPU.tag.ilike(busca_like) | CPU.processador.ilike(busca_like)
         )
+    sort = (sort or "nome").lower()
+    dir = (dir or "asc").lower()
+    if sort not in {"nome", "tag"}:
+        sort = "nome"
+    if dir not in {"asc", "desc"}:
+        dir = "asc"
+    sort_column = CPU.nome if sort == "nome" else CPU.tag
+    if dir == "asc":
+        query = query.order_by(func.lower(sort_column).asc(), CPU.tag.asc(), CPU.nome.asc())
+    else:
+        query = query.order_by(func.lower(sort_column).desc(), CPU.tag.desc(), CPU.nome.desc())
 
     page = max(page, 1)
     per_page = 15
     total = query.count()
-    cpus = (
-        query.order_by(CPU.nome.asc(), CPU.tag.asc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
-        .all()
-    )
+    cpus = query.offset((page - 1) * per_page).limit(per_page).all()
 
     setores = [row[0] for row in db.query(CPU.setor).filter(CPU.setor.isnot(None)).distinct().order_by(CPU.setor)]
     filiais = [row[0] for row in db.query(CPU.filial).filter(CPU.filial.isnot(None)).distinct().order_by(CPU.filial)]
@@ -990,6 +1014,8 @@ def controle_cpus_page(
             "filtro_nome": nome,
             "filtro_tag": tag,
             "filtro_busca": busca,
+            "filtro_sort": sort,
+            "filtro_dir": dir,
             "page": page,
             "per_page": per_page,
             "total": total,
@@ -1435,6 +1461,7 @@ def inventory_page(
     codigo: str = "",
     descricao: str = "",
     categoria: str = "",
+    page: int = 1,
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
@@ -1445,7 +1472,18 @@ def inventory_page(
         query = query.filter(Item.descricao.ilike(f"%{descricao}%"))
     if categoria:
         query = query.filter(Item.categoria.ilike(f"%{categoria}%"))
-    itens = query.order_by(Item.descricao).all()
+    page = max(page, 1)
+    per_page = 10
+    total = query.count()
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    itens = (
+        query.order_by(Item.descricao)
+        .offset(start)
+        .limit(per_page)
+        .all()
+    )
     erro_item_id = request.query_params.get("item_id")
     item_relacionado = None
     if erro_item_id:
@@ -1466,6 +1504,11 @@ def inventory_page(
             "categorias": categorias,
             "erro": request.query_params.get("erro"),
             "item_relacionado": item_relacionado,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": total_pages,
+            "start": start,
         },
     )
 
@@ -1751,13 +1794,102 @@ def deletar_entrada(entrada_id: int, db: Session = Depends(get_db), user=Depends
 @app.get("/saidas", include_in_schema=False)
 def saidas_page(request: Request, db: Session = Depends(get_db), user=Depends(require_user)):
     itens = db.query(Item).order_by(Item.descricao).all()
-    saidas = db.query(Saida).order_by(Saida.created_at.desc()).limit(20).all()
+    try:
+        page = max(1, int(request.query_params.get("page", "1") or 1))
+    except Exception:
+        page = 1
+    page_size = 8
+    item_id_raw = request.query_params.get("item_id")
+    quantidade_raw = request.query_params.get("quantidade")
+    filial = (request.query_params.get("filial") or "").strip()
+    setor = (request.query_params.get("setor") or "").strip()
+    motivo = (request.query_params.get("motivo") or "").strip()
+
+    query_saidas = db.query(Saida).join(Item)
+    if item_id_raw:
+        try:
+            item_id_val = int(item_id_raw)
+            query_saidas = query_saidas.filter(Saida.item_id == item_id_val)
+        except Exception:
+            pass
+    if quantidade_raw:
+        try:
+            qty_val = int(quantidade_raw)
+            query_saidas = query_saidas.filter(Saida.quantidade == qty_val)
+        except Exception:
+            pass
+    if filial:
+        like = f"%{filial}%"
+        query_saidas = query_saidas.filter(Saida.destino.ilike(like))
+    if setor:
+        like = f"%{setor}%"
+        query_saidas = query_saidas.filter(Saida.destino.ilike(like))
+    if motivo:
+        like = f"%{motivo}%"
+        query_saidas = query_saidas.filter(Saida.motivo.ilike(like))
+
+    total_saidas = query_saidas.count()
+    total_pages = max(1, (total_saidas + page_size - 1) // page_size)
+    page = min(page, total_pages)
+    offset = (page - 1) * page_size
+
+    saidas = query_saidas.order_by(Saida.created_at.desc()).offset(offset).limit(page_size).all()
     filiais_options = [f.nome for f in db.query(Filial).order_by(Filial.nome).all()]
     setores_options = [s.nome for s in db.query(Setor).order_by(Setor.nome).all()]
     return templates.TemplateResponse(
         "saidas.html",
-        {"request": request, "itens": itens, "saidas": saidas, "user": user, "filiais_options": filiais_options, "setores_options": setores_options},
+        {
+            "request": request,
+            "itens": itens,
+            "saidas": saidas,
+            "user": user,
+            "filiais_options": filiais_options,
+            "setores_options": setores_options,
+            "page": page,
+            "pages": total_pages,
+            "page_size": page_size,
+            "total_saidas": total_saidas,
+            "busca": "",
+            "f_item_id": item_id_raw or "",
+            "f_quantidade": quantidade_raw or "",
+            "f_filial": filial,
+            "f_setor": setor,
+            "f_motivo": motivo,
+        },
     )
+
+
+@app.get("/api/saidas/serie")
+def saidas_serie(days: int = 30, db: Session = Depends(get_db), user=Depends(require_user)):
+    days = max(1, min(int(days or 30), 180))
+    today = datetime.date.today()
+    start_date = today - datetime.timedelta(days=days - 1)
+    rows = (
+        db.query(func.date(Saida.created_at), func.sum(Saida.quantidade))
+        .filter(Saida.created_at >= start_date)
+        .group_by(func.date(Saida.created_at))
+        .order_by(func.date(Saida.created_at))
+        .all()
+    )
+    data_map: Dict[datetime.date, int] = {}
+    for date_val, total in rows:
+        if isinstance(date_val, datetime.date):
+            key = date_val
+        else:
+            try:
+                key = datetime.datetime.fromisoformat(str(date_val)).date()
+            except Exception:
+                continue
+        data_map[key] = int(total or 0)
+
+    labels: List[str] = []
+    valores: List[int] = []
+    for i in range(days):
+        day = start_date + datetime.timedelta(days=i)
+        labels.append(day.strftime("%d/%m"))
+        valores.append(data_map.get(day, 0))
+
+    return {"labels": labels, "quantidades": valores, "total": sum(valores)}
 
 
 @app.post("/api/saidas")
@@ -2049,6 +2181,7 @@ def movimentacoes_page(
     status: str = "",
     destinatario: str = "",
     data: str = "",
+    page: int = 1,
     db: Session = Depends(get_db),
     user=Depends(require_user),
 ):
@@ -2080,7 +2213,7 @@ def movimentacoes_page(
         except Exception:
             pass
 
-    entradas = entradas_query.order_by(Entrada.created_at.desc()).limit(200).all()
+    entradas = entradas_query.order_by(Entrada.created_at.desc()).all()
     compras = compras_query.order_by(Compra.id.desc()).all()
     compra_map = {c.id: c for c in compras}
     filiais_options = [f.nome for f in db.query(Filial).order_by(Filial.nome).all()]
@@ -2156,7 +2289,14 @@ def movimentacoes_page(
             }
         )
 
-    movimentos = sorted(movimentos, key=lambda m: m["data_mov"] or datetime.datetime.min, reverse=True)[:200]
+    movimentos = sorted(movimentos, key=lambda m: m["data_mov"] or datetime.datetime.min, reverse=True)
+
+    per_page = 10
+    total = len(movimentos)
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), total_pages)
+    start = (page - 1) * per_page
+    movimentos_paginados = movimentos[start : start + per_page]
 
     return templates.TemplateResponse(
         "movimentacoes.html",
@@ -2164,7 +2304,7 @@ def movimentacoes_page(
             "request": request,
             "user": user,
             "itens": itens,
-            "movimentos": movimentos,
+            "movimentos": movimentos_paginados,
             "filtro_tipo": tipo,
             "filtro_fornecedor": fornecedor,
             "filtro_categoria": categoria,
@@ -2176,6 +2316,10 @@ def movimentacoes_page(
             "setores_options": setores_options,
             "fornecedores_options": fornecedores_options,
             "categorias_options": categorias_options,
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": total_pages,
         },
     )
 

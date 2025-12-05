@@ -294,6 +294,50 @@ details form { margin-top: 8px; }
 .cell-meta { color: var(--muted); font-size: 12px; margin-top: 4px; }
 .total-row td { background: #fafafa; font-weight: 800; border-top: 2px solid #e0e4ea; }
 .total-label { text-transform: uppercase; }
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.page-info { color: var(--muted); font-size: 13px; }
+.page-info.strong { color: var(--text); font-weight: 800; }
+.page-btn {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #f8fafc;
+    color: var(--text);
+    font-weight: 700;
+}
+.page-btn.primary {
+    background: linear-gradient(135deg, #3b82f6, #00b3ff);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 8px 16px rgba(59,130,246,0.25);
+}
+.page-btn:hover { background: #eef2ff; }
+.page-btn.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+    background: #f3f4f6;
+}
+.pagination-compact {
+    justify-content: flex-end;
+    gap: 12px;
+    align-items: center;
+}
+.sortable {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: inherit;
+    text-decoration: none;
+    font-weight: 700;
+}
+.sortable .caret { font-size: 12px; color: var(--muted); }
+.sortable.active .caret { color: var(--text); }
 .best-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .best-list li { padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc; display: flex; align-items: center; gap: 8px; }
 .best-supplier { font-weight: 700; color: var(--blue-dark); }

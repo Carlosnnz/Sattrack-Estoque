@@ -75,7 +75,7 @@
                 <tbody>
                 {% for item in itens %}
                     <tr>
-                        <td>{{ loop.index }}</td>
+                        <td>{{ start + loop.index0 + 1 }}</td>
                         <td>{% if item.foto %}<img src="{{ item.foto }}" class="small-avatar" alt="foto">{% else %}-{% endif %}</td>
                         <td>{{ item.codigo_interno }}</td>
                         <td>{{ item.descricao }}</td>
@@ -109,10 +109,28 @@
                         </td>
                     </tr>
                 {% else %}
-                    <tr><td colspan="8">Nenhum item cadastrado.</td></tr>
+                    <tr><td colspan="10">Nenhum item cadastrado.</td></tr>
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
+        <div class="inline-actions" style="justify-content: space-between; margin-top: 12px; flex-wrap: wrap;">
+            <div>Total: {{ total }} itens</div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                {% set prev_page = page - 1 %}
+                {% set next_page = page + 1 %}
+                {% if page > 1 %}
+                    <a class="btn secondary" href="/inventario?codigo={{ filtro_codigo }}&descricao={{ filtro_descricao }}&categoria={{ filtro_categoria }}&page={{ prev_page }}">Anterior</a>
+                {% else %}
+                    <span class="badge">Anterior</span>
+                {% endif %}
+                <span>Pagina {{ page }} / {{ total_pages }}</span>
+                {% if page < total_pages %}
+                    <a class="btn secondary" href="/inventario?codigo={{ filtro_codigo }}&descricao={{ filtro_descricao }}&categoria={{ filtro_categoria }}&page={{ next_page }}">Proxima</a>
+                {% else %}
+                    <span class="badge">Proxima</span>
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>

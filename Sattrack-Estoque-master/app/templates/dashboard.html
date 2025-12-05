@@ -18,7 +18,7 @@
         <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
             <i class="fi fi-rr-coin"></i><span>Valor Total</span>
         </p>
-        <div class="stat-value">R$ {{ "%.2f"|format(valor_total) }}</div>
+        <div class="stat-value">{{ valor_total|real }}</div>
         <p class="stat-sub">Inventário calculado pela última entrada</p>
     </div>
     <div class="card stat-card">
@@ -96,32 +96,95 @@
     </div>
 </div>
 
+
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 async function loadCharts() {
+    const colors = {
+        primary: '#2563eb',
+        primaryAccent: '#3b82f6',
+        red: '#ef4444',
+        grid: 'rgba(15,23,42,0.08)',
+    };
+
     const estoque = await fetch('/api/dashboard/estoque').then(r => r.json());
     const fluxo = await fetch('/api/dashboard/fluxo').then(r => r.json());
     const categorias = await fetch('/api/dashboard/categorias').then(r => r.json());
 
-    new Chart(document.getElementById('chart-estoque'), {
+    const estoqueData = (estoque.labels || []).map((label, idx) => ({
+        label,
+        value: estoque.quantidades?.[idx] ?? 0
+    })).sort((a, b) => b.value - a.value);
+
+    const totalEstoque = estoqueData.reduce((sum, item) => sum + item.value, 0);
+    const baseHeight = 360;
+    const estoqueHeight = Math.min(Math.max(estoqueData.length * 22, baseHeight), 520);
+    document.querySelectorAll('.chart-container').forEach(el => { el.style.height = `${estoqueHeight}px`; });
+
+    const estoqueCtx = document.getElementById('chart-estoque').getContext('2d');
+    const estoqueGradient = estoqueCtx.createLinearGradient(0, 0, estoqueCtx.canvas.clientWidth || 420, 0);
+    estoqueGradient.addColorStop(0, colors.primary);
+    estoqueGradient.addColorStop(1, colors.primaryAccent);
+
+    new Chart(estoqueCtx, {
         type: 'bar',
         data: {
-            labels: estoque.labels,
+            labels: estoqueData.map(d => d.label),
             datasets: [{
-                label: 'Quantidade',
-                data: estoque.quantidades,
-                backgroundColor: '#3b82f6',
+                label: 'Quantidade em estoque',
+                data: estoqueData.map(d => d.value),
+                backgroundColor: estoqueGradient,
+                borderColor: '#1d4ed8',
+                borderWidth: 1,
                 borderRadius: 8,
+                maxBarThickness: 22,
+                barPercentage: 0.75,
+                categoryPercentage: 0.75,
             }]
         },
         options: {
+            indexAxis: 'y',
             responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+            maintainAspectRatio: false,
+            animation: { duration: 900, easing: 'easeOutCubic' },
+            layout: { padding: { top: 6, bottom: 6, right: 8 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#0f172a',
+                    callbacks: {
+                        label: (ctx) => {
+                            const value = ctx.raw ?? 0;
+                            const share = totalEstoque ? ((value / totalEstoque) * 100).toFixed(1) : 0;
+                            return `${value} em estoque (${share}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: { precision: 0 },
+                    grid: { color: colors.grid, drawBorder: false }
+                },
+                y: {
+                    ticks: { autoSkip: false, padding: 6, color: '#111827' },
+                    grid: { display: false }
+                }
+            }
         }
     });
 
-    new Chart(document.getElementById('chart-fluxo'), {
+    const fluxoCtx = document.getElementById('chart-fluxo').getContext('2d');
+    const fluxoGradientEntradas = fluxoCtx.createLinearGradient(0, 0, 0, fluxoCtx.canvas.height || 280);
+    fluxoGradientEntradas.addColorStop(0, 'rgba(37,99,235,0.28)');
+    fluxoGradientEntradas.addColorStop(1, 'rgba(37,99,235,0.04)');
+    const fluxoGradientSaidas = fluxoCtx.createLinearGradient(0, 0, 0, fluxoCtx.canvas.height || 280);
+    fluxoGradientSaidas.addColorStop(0, 'rgba(239,68,68,0.25)');
+    fluxoGradientSaidas.addColorStop(1, 'rgba(239,68,68,0.04)');
+
+    new Chart(fluxoCtx, {
         type: 'line',
         data: {
             labels: fluxo.labels,
@@ -129,40 +192,114 @@ async function loadCharts() {
                 {
                     label: 'Entradas',
                     data: fluxo.entradas,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59,130,246,0.18)',
+                    borderColor: colors.primaryAccent,
+                    backgroundColor: fluxoGradientEntradas,
                     fill: true,
-                    tension: 0.25,
+                    tension: 0.32,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: colors.primaryAccent,
+                    pointBorderWidth: 2,
                 },
                 {
-                    label: 'Saídas',
+                    label: 'Saidas',
                     data: fluxo.saidas,
-                    borderColor: '#ef4444',
-                    backgroundColor: 'rgba(239,68,68,0.16)',
+                    borderColor: colors.red,
+                    backgroundColor: fluxoGradientSaidas,
                     fill: true,
-                    tension: 0.25,
+                    tension: 0.32,
+                    borderWidth: 2.5,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: colors.red,
+                    pointBorderWidth: 2,
                 }
             ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
-            scales: { y: { beginAtZero: true } }
+            layout: { padding: { top: 10, right: 6, left: 4, bottom: 4 } },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, boxWidth: 10 }
+                },
+                tooltip: { backgroundColor: '#0f172a' }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, color: '#4b5563' },
+                    grid: { color: colors.grid, drawBorder: false }
+                },
+                x: {
+                    ticks: { color: '#4b5563' },
+                    grid: { display: false, drawBorder: false }
+                }
+            }
         }
     });
 
+    const categoriasTotal = (categorias.quantidades || []).reduce((sum, val) => sum + (val || 0), 0);
+    const centerText = {
+        id: 'doughnutCenterText',
+        afterDraw(chart, args, opts) {
+            const { ctx } = chart;
+            const meta = chart.getDatasetMeta(0);
+            if (!meta.data.length) return;
+            const { x, y } = meta.data[0].getProps(['x', 'y'], true);
+            ctx.save();
+            ctx.fillStyle = '#111827';
+            ctx.textAlign = 'center';
+            ctx.font = '700 14px "Inter","Poppins",system-ui';
+            ctx.fillText('Total', x, y - 6);
+            ctx.font = '700 18px "Inter","Poppins",system-ui';
+            ctx.fillText(opts.value, x, y + 14);
+            ctx.restore();
+        }
+    };
+
     new Chart(document.getElementById('chart-categorias'), {
         type: 'doughnut',
+        plugins: [centerText],
         data: {
             labels: categorias.labels,
             datasets: [{
                 data: categorias.quantidades,
                 backgroundColor: ['#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444'],
+                borderWidth: 2,
+                borderColor: '#ffffff',
             }]
         },
-        options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { usePointStyle: true, boxWidth: 10 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const value = ctx.raw ?? 0;
+                            const share = categoriasTotal ? ((value / categoriasTotal) * 100).toFixed(1) : 0;
+                            return `${ctx.label}: ${value} (${share}%)`;
+                        }
+                    }
+                },
+                doughnutCenterText: { value: categoriasTotal }
+            }
+        }
     });
 }
 loadCharts();
 </script>
+
 {% endblock %}

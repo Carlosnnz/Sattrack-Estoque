@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Saídas{% endblock %}
+{% block title %}Saidas{% endblock %}
 {% block content %}
 <div class="grid two">
     <div class="card">
-        <div class="card-header">Registrar Saída</div>
+        <div class="card-header">Registrar Saida</div>
         <form method="post" action="/saidas/registrar" class="form-grid">
             <label>Item
                 <select name="item_id" required>
@@ -36,39 +36,100 @@
         </form>
     </div>
     <div class="card">
-        <div class="card-header">Últimas Saídas</div>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Item</th><th>Qtd</th><th>Filial/Setor</th><th>Usuário</th><th>Motivo</th><th>Data</th><th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for s in saidas %}
-                    <tr>
-                        <td>{{ s.item.descricao if s.item else s.item_id }}</td>
-                        <td>{{ s.quantidade }}</td>
-                        <td>{{ s.destino }}</td>
-                        <td>{{ s.usuario }}</td>
-                        <td>{{ s.motivo }}</td>
-                        <td>{{ s.created_at|datetime }}</td>
-                        <td>
-                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saída e ajustar estoque?');">
-                                <button class="btn danger" type="submit">Excluir</button>
-                            </form>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr><td colspan="7">Nenhum registro.</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        <div class="card-header">Saidas nos ultimos 30 dias</div>
+        <div class="chart-container"><canvas id="chart-saidas"></canvas></div>
+        <p class="stat-sub" style="margin:8px 0 0">Total no periodo: <strong id="saidas-total">--</strong></p>
+        <p class="stat-sub" style="margin:2px 0 0; color:#4b5563;">Atualize a pagina para novos dados.</p>
     </div>
 </div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Ultimas Saidas</div>
+    <form method="get" action="/saidas" class="filters-grid" style="margin-bottom:8px;">
+        <label>Item
+            <select name="item_id">
+                <option value="">Selecione</option>
+                {% for item in itens %}
+                    <option value="{{ item.id }}" {% if f_item_id|int == item.id %}selected{% endif %}>{{ item.descricao }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Quantidade
+            <input type="number" name="quantidade" min="1" value="{{ f_quantidade }}">
+        </label>
+        <label>Filial
+            <select name="filial">
+                <option value="">Selecione</option>
+                {% for f in filiais_options %}
+                    <option value="{{ f }}" {% if f_filial == f %}selected{% endif %}>{{ f }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Setor
+            <select name="setor">
+                <option value="">Selecione</option>
+                {% for s in setores_options %}
+                    <option value="{{ s }}" {% if f_setor == s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Motivo
+            <input type="text" name="motivo" value="{{ f_motivo }}">
+        </label>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+            <button class="btn" type="submit">Filtrar</button>
+            <a class="btn secondary" href="/saidas">Limpar</a>
+        </div>
+    </form>
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th><th>Qtd</th><th>Filial/Setor</th><th>Usuario</th><th>Motivo</th><th>Data</th><th>Acoes</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in saidas %}
+                <tr>
+                    <td>{{ s.item.descricao if s.item else s.item_id }}</td>
+                    <td>{{ s.quantidade }}</td>
+                    <td>{{ s.destino }}</td>
+                    <td>{{ s.usuario }}</td>
+                    <td>{{ s.motivo }}</td>
+                    <td>{{ s.created_at|datetime }}</td>
+                    <td>
+                        <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saida e ajustar estoque?');">
+                            <button class="btn danger" type="submit">Excluir</button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7">Nenhum registro.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pages > 1 %}
+    {% set qp = '&item_id=' ~ f_item_id ~ '&quantidade=' ~ f_quantidade ~ '&filial=' ~ f_filial ~ '&setor=' ~ f_setor ~ '&motivo=' ~ f_motivo %}
+    <div class="pagination pagination-compact">
+        <span class="page-info strong">Pagina {{ page }} / {{ pages }}</span>
+        <span class="page-info">• {{ total_saidas }} registros</span>
+        {% if page > 1 %}
+            <a class="page-btn" href="/saidas?page={{ page - 1 }}{{ qp }}">Anterior</a>
+        {% else %}
+            <span class="page-btn disabled">Anterior</span>
+        {% endif %}
+        {% if page < pages %}
+            <a class="page-btn primary" href="/saidas?page={{ page + 1 }}{{ qp }}">Proxima</a>
+        {% else %}
+            <span class="page-btn disabled">Proxima</span>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    (function() {
+    (async function() {
         const filial = document.getElementById('filial_saida_select');
         const setor = document.getElementById('setor_saida_select');
         const hidden = document.getElementById('destino_saida_hidden');
@@ -79,6 +140,64 @@
             filial.addEventListener('change', sync);
             setor.addEventListener('change', sync);
             sync();
+        }
+
+        const chartContainer = document.getElementById('chart-saidas').parentElement;
+        chartContainer.style.height = '340px';
+
+        try {
+            const serie = await fetch('/api/saidas/serie?days=30').then(r => r.json());
+            const totalEl = document.getElementById('saidas-total');
+            if (totalEl && typeof serie.total !== 'undefined') {
+                totalEl.textContent = serie.total;
+            }
+            const ctx = document.getElementById('chart-saidas').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height || 320);
+            gradient.addColorStop(0, 'rgba(239,68,68,0.35)');
+            gradient.addColorStop(1, 'rgba(239,68,68,0.06)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: serie.labels,
+                    datasets: [{
+                        label: 'Saidas',
+                        data: serie.quantidades,
+                        borderColor: '#ef4444',
+                        backgroundColor: gradient,
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#ef4444',
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.32,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#0f172a' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0, color: '#4b5563' },
+                            grid: { color: 'rgba(15,23,42,0.08)', drawBorder: false }
+                        },
+                        x: {
+                            ticks: { color: '#4b5563', maxTicksLimit: 10 },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error('Erro ao carregar grafico de saidas', err);
         }
     })();
 </script>
