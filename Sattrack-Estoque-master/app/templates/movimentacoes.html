@@ -1,58 +1,262 @@
 {% extends "base.html" %}
-{% block title %}Movimentações{% endblock %}
+{% block title %}Movimentacoes{% endblock %}
 {% block content %}
-<div class="card">
-        <div class="card-header">Nova Compra</div>
-        <form action="/compras/criar" method="post" enctype="multipart/form-data" class="form-grid">
-            <label>Fornecedor
-                <select name="fornecedor" required>
-                    <option value="">Selecione</option>
+<div class="mov-page">
+    <div class="card toolbar-card">
+        <div class="toolbar-heading">
+            <div>
+                <p class="eyebrow">Visao rapida</p>
+                <h3>Movimentacoes</h3>
+            </div>
+            <div class="pill ghost">Total: {{ total }} registros</div>
+        </div>
+        <form method="get" action="/movimentacoes/entradas" class="filter-toolbar">
+            {% set selected_tipo = filtro_tipo or 'compra' %}
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-slider"></i>
+                <select name="tipo">
+                    <option value="" {% if selected_tipo == '' %}selected{% endif %}>Tipo</option>
+                    <option value="compra" {% if selected_tipo=='compra' %}selected{% endif %}>Compra</option>
+                    <option value="entrada_manual" {% if selected_tipo=='entrada_manual' %}selected{% endif %}>Entrada Manual</option>
+                    <option value="entrada_automatica" {% if selected_tipo=='entrada_automatica' %}selected{% endif %}>Entrada Automatica</option>
+                </select>
+            </div>
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-briefcase"></i>
+                <select name="fornecedor">
+                    <option value="" {% if not filtro_fornecedor %}selected{% endif %}>Fornecedor</option>
                     {% for f in fornecedores_options %}
-                        <option value="{{ f }}">{{ f }}</option>
+                        <option value="{{ f }}" {% if filtro_fornecedor==f %}selected{% endif %}>{{ f }}</option>
                     {% endfor %}
                 </select>
-            </label>
-            <label>Item<input name="item_nome" required></label>
-            <label>Categoria
+            </div>
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-box"></i>
                 <select name="categoria">
-                    <option value="">Selecione</option>
+                    <option value="" {% if not filtro_categoria %}selected{% endif %}>Categoria</option>
                     {% for c in categorias_options %}
-                        <option value="{{ c }}">{{ c }}</option>
+                        <option value="{{ c }}" {% if filtro_categoria==c %}selected{% endif %}>{{ c }}</option>
                     {% endfor %}
                 </select>
-            </label>
-            <input type="hidden" name="destino" id="destino_compra_hidden">
-            <label>Filial
-                <select id="filial_compra_select">
-                    <option value="">Selecione</option>
-                    {% for f in filiais_options %}
-                        <option value="{{ f }}">{{ f }}</option>
-                    {% endfor %}
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-search"></i>
+                <input name="item" value="{{ filtro_item }}" placeholder="Item">
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-user"></i>
+                <input name="destinatario" value="{{ filtro_destinatario }}" placeholder="Destinatario">
+            </div>
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-badge-check"></i>
+                <select name="status">
+                    <option value="" {% if not filtro_status %}selected{% endif %}>Status</option>
+                    <option value="pendente" {% if filtro_status=='pendente' %}selected{% endif %}>Pendente</option>
+                    <option value="enviado" {% if filtro_status=='enviado' %}selected{% endif %}>A Caminho</option>
+                    <option value="entregue" {% if filtro_status=='entregue' %}selected{% endif %}>Entregue</option>
                 </select>
-            </label>
-            <label>Setor
-                <select id="setor_compra_select">
-                    <option value="">Selecione</option>
-                    {% for s in setores_options %}
-                        <option value="{{ s }}">{{ s }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Destinatário<input name="destinatario" required></label>
-            <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
-            <label>Custo Unitário<input type="number" step="0.01" name="custo_unitario" required></label>
-            <label>Data do Pedido<input type="date" name="data_pedido"></label>
-            <label>Status
-                <select name="status" required>
-                    <option value="pendente">Pendente</option>
-                    <option value="enviado">A Caminho</option>
-                    <option value="entregue">Entregue</option>
-                </select>
-            </label>
-            <label>Nota Fiscal<input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png"></label>
-            <label>Foto<input type="file" name="foto" accept=".jpg,.jpeg,.png"></label>
-            <button class="btn" type="submit">Salvar compra</button>
+            </div>
+            <div class="input-chip">
+                <i class="fi fi-rr-calendar"></i>
+                <input type="date" name="data" value="{{ filtro_data }}">
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn ghost-btn" type="submit"><i class="fi fi-rr-search"></i><span>Filtrar</span></button>
+                <a class="btn tertiary" href="/movimentacoes/entradas"><i class="fi fi-rr-refresh"></i><span>Limpar</span></a>
+            </div>
         </form>
+    </div>
+
+    <div class="grid two mov-grid">
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Nova compra</p>
+                    <h3>Cadastro</h3>
+                </div>
+                <div class="pill blue">Registro</div>
+            </div>
+            <form action="/compras/criar" method="post" enctype="multipart/form-data" class="mov-form">
+                <label>Fornecedor
+                    <select name="fornecedor" required>
+                        <option value="">Selecione</option>
+                        {% for f in fornecedores_options %}
+                            <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Item<input name="item_nome" required placeholder="Ex: Notebook Dell"></label>
+                <label>Categoria
+                    <select name="categoria">
+                        <option value="">Selecione</option>
+                        {% for c in categorias_options %}
+                            <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <input type="hidden" name="destino" id="destino_compra_hidden">
+                <label>Filial
+                    <select id="filial_compra_select">
+                        <option value="">Selecione</option>
+                        {% for f in filiais_options %}
+                            <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Setor
+                    <select id="setor_compra_select">
+                        <option value="">Selecione</option>
+                        {% for s in setores_options %}
+                            <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Destinatario<input name="destinatario" required placeholder="Responsavel"></label>
+                <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
+                <label>Custo Unitario<input type="number" step="0.01" name="custo_unitario" required placeholder="0,00"></label>
+                <label>Data do Pedido<input type="date" name="data_pedido"></label>
+                <label>Status
+                    <select name="status" required>
+                        <option value="pendente">Pendente</option>
+                        <option value="enviado">A Caminho</option>
+                        <option value="entregue">Entregue</option>
+                    </select>
+                </label>
+                <div class="file-stack">
+                    <div class="dropzone">
+                        <i class="fi fi-rr-file-invoice-dollar"></i>
+                        <div>
+                            <strong>Nota fiscal</strong>
+                            <p>Envie PDF ou imagem</p>
+                        </div>
+                        <input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+                    <div class="dropzone">
+                        <i class="fi fi-rr-picture"></i>
+                        <div>
+                            <strong>Foto</strong>
+                            <p>JPG ou PNG</p>
+                        </div>
+                        <input type="file" name="foto" accept=".jpg,.jpeg,.png">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn" type="submit"><i class="fi fi-rr-check"></i><span>Salvar compra</span></button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Historico</p>
+                    <h3>Movimentacoes</h3>
+                </div>
+                <div class="pill ghost">Pagina {{ page }} de {{ total_pages }}</div>
+            </div>
+            <div class="table-responsive mov-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Item</th>
+                            <th>Qtd</th>
+                            <th>Destinatario</th>
+                            <th>Usuario</th>
+                            <th>Fornecedor</th>
+                            <th>Custo</th>
+                            <th>Data</th>
+                            <th>Status</th>
+                            <th>NF</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% set compras = namespace(total=0) %}
+                    {% for mov in movimentos %}
+                        {% if mov.tipo|lower == 'compra' %}
+                            {% set compras.total = compras.total + 1 %}
+                            {% set is_low = mov.quantidade is not none and mov.quantidade <= 1 %}
+                            <tr class="row-link">
+                                <td><span class="type-pill">{{ mov.tipo }}</span></td>
+                                <td class="item-cell">
+                                    {% if mov.foto %}<img src="{{ mov.foto }}" class="small-avatar" alt="foto">{% else %}<div class="avatar placeholder"><i class="fi fi-rr-picture"></i></div>{% endif %}
+                                    <span>{{ mov.item_nome }}</span>
+                                </td>
+                                <td><span class="pill {{ 'danger' if is_low else 'blue' }}">{{ mov.quantidade }}</span></td>
+                                <td>{{ mov.destinatario }}</td>
+                                <td>{{ mov.usuario or '-' }}</td>
+                                <td>{{ mov.fornecedor or '-' }}</td>
+                                <td class="mono">R$ {{ "%.2f"|format(mov.custo or 0) }}</td>
+                                <td>{{ mov.data_mov|datetime }}</td>
+                                <td><span class="status-dot status-{{ mov.status }}">{{ mov.status }}</span></td>
+                                <td>
+                                    {% if mov.nota_fiscal %}
+                                        <a class="chip-link" href="{{ mov.nota_fiscal }}" target="_blank"><i class="fi fi-rr-external-link"></i> Abrir</a>
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td class="actions">
+                                    {% if mov.tipo == "Compra" %}
+                                        <details class="row-actions">
+                                            <summary title="Editar compra"><i class="fi fi-rr-edit"></i></summary>
+                                            <form method="post" action="/compras/{{ mov.compra_id }}/editar" enctype="multipart/form-data" class="form-grid compact">
+                                                <select name="fornecedor" required>
+                                                    <option value="">Selecione</option>
+                                                    {% for f in fornecedores_options %}
+                                                        <option value="{{ f }}" {% if mov.fornecedor==f %}selected{% endif %}>{{ f }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <input name="item_nome" value="{{ mov.item_nome }}" required>
+                                                <select name="categoria">
+                                                    <option value="">Selecione</option>
+                                                    {% for c in categorias_options %}
+                                                        <option value="{{ c }}" {% if mov.categoria==c %}selected{% endif %}>{{ c }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                                <input name="destino" value="{{ mov.destino or '' }}">
+                                                <input name="destinatario" value="{{ mov.destinatario }}" required>
+                                                <input type="number" name="quantidade" value="{{ mov.quantidade }}" min="1" required>
+                                                <input type="date" name="data_pedido">
+                                                <input type="number" step="0.01" name="custo_unitario" value="{{ mov.custo or 0 }}" required>
+                                                <select name="status">
+                                                    <option value="pendente" {% if mov.status=='pendente' %}selected{% endif %}>Pendente</option>
+                                                    <option value="enviado" {% if mov.status=='enviado' %}selected{% endif %}>A Caminho</option>
+                                                    <option value="entregue" {% if mov.status=='entregue' %}selected{% endif %}>Entregue</option>
+                                                </select>
+                                                <input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png">
+                                                <input type="file" name="foto" accept=".jpg,.jpeg,.png">
+                                                <button class="btn" type="submit">Salvar</button>
+                                            </form>
+                                            <form method="post" action="/compras/{{ mov.compra_id }}/deletar" onsubmit="return confirm('Excluir compra?');">
+                                                <button class="btn danger" type="submit">Excluir</button>
+                                            </form>
+                                        </details>
+                                    {% else %}
+                                        <span class="badge">Visualizacao</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                    {% if compras.total == 0 %}
+                        <tr><td colspan="11">Nenhuma compra encontrada.</td></tr>
+                    {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination modern">
+                {% set prev_page = page - 1 %}
+                {% set next_page = page + 1 %}
+                <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ prev_page }}"{% endif %}>
+                    <i class="fi fi-rr-angle-left"></i> Anterior
+                </a>
+                <span class="page-info strong">Pagina {{ page }} / {{ total_pages }}</span>
+                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ next_page }}"{% endif %}>
+                    Proxima <i class="fi fi-rr-angle-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
     (function() {
@@ -69,163 +273,4 @@
         }
     })();
 </script>
-
-    <div class="card">
-        <div class="card-header">Filtros</div>
-        <form method="get" action="/movimentacoes/entradas" class="filters-grid">
-            <label>Tipo
-                <select name="tipo">
-                <option value="" {% if not filtro_tipo %}selected{% endif %}>Todos</option>
-                <option value="compra" {% if filtro_tipo=='compra' %}selected{% endif %}>Compra</option>
-                <option value="entrada_manual" {% if filtro_tipo=='entrada_manual' %}selected{% endif %}>Entrada Manual</option>
-                <option value="entrada_automatica" {% if filtro_tipo=='entrada_automatica' %}selected{% endif %}>Entrada Automática</option>
-            </select>
-        </label>
-        <label>Fornecedor
-            <select name="fornecedor">
-                <option value="" {% if not filtro_fornecedor %}selected{% endif %}>Todos</option>
-                {% for f in fornecedores_options %}
-                    <option value="{{ f }}" {% if filtro_fornecedor==f %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Categoria
-            <select name="categoria">
-                <option value="" {% if not filtro_categoria %}selected{% endif %}>Todas</option>
-                {% for c in categorias_options %}
-                    <option value="{{ c }}" {% if filtro_categoria==c %}selected{% endif %}>{{ c }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Item<input name="item" value="{{ filtro_item }}"></label>
-        <label>Status
-            <select name="status">
-                <option value="" {% if not filtro_status %}selected{% endif %}>Todos</option>
-                <option value="pendente" {% if filtro_status=='pendente' %}selected{% endif %}>Pendente</option>
-                <option value="enviado" {% if filtro_status=='enviado' %}selected{% endif %}>A Caminho</option>
-                <option value="entregue" {% if filtro_status=='entregue' %}selected{% endif %}>Entregue</option>
-            </select>
-        </label>
-        <label>Destinatário<input name="destinatario" value="{{ filtro_destinatario }}"></label>
-        <label>Data<input type="date" name="data" value="{{ filtro_data }}"></label>
-        <div class="inline-actions">
-            <button class="btn" type="submit">Filtrar</button>
-            <a class="btn secondary" href="/movimentacoes/entradas">Limpar</a>
-        </div>
-    </form>
-</div>
-
-<div class="card">
-    <div class="card-header">Movimentações</div>
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>Tipo</th><th>Item</th><th>Qtd</th><th>Destinatário</th><th>Usuário</th><th>Fornecedor</th><th>Custo</th><th>Data</th><th>Status</th><th>NF</th><th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for mov in movimentos %}
-                <tr>
-                    <td><span class="pill blue">{{ mov.tipo }}</span></td>
-                    <td>
-                        {% if mov.foto %}<img src="{{ mov.foto }}" class="small-avatar" alt="foto">{% endif %}
-                        {{ mov.item_nome }}
-                    </td>
-                    <td>{{ mov.quantidade }}</td>
-                    <td>{{ mov.destinatario }}</td>
-                    <td>{{ mov.usuario or '-' }}</td>
-                    <td>{{ mov.fornecedor or '-' }}</td>
-                    <td>R$ {{ "%.2f"|format(mov.custo or 0) }}</td>
-                    <td>{{ mov.data_mov|datetime }}</td>
-                    <td>
-                        <span class="status-badge status-{{ mov.status }}">{{ mov.status }}</span>
-                    </td>
-                    <td>
-                        {% if mov.nota_fiscal %}
-                            <a href="{{ mov.nota_fiscal }}" target="_blank">Abrir</a>
-                        {% else %}-{% endif %}
-                    </td>
-                    <td>
-                        {% if mov.tipo == "Compra" %}
-                            <details>
-                                <summary>Editar</summary>
-                                <form method="post" action="/compras/{{ mov.compra_id }}/editar" enctype="multipart/form-data" class="form-grid">
-                                    <select name="fornecedor" required>
-                                        <option value="">Selecione</option>
-                                        {% for f in fornecedores_options %}
-                                            <option value="{{ f }}" {% if mov.fornecedor==f %}selected{% endif %}>{{ f }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <input name="item_nome" value="{{ mov.item_nome }}" required>
-                                    <select name="categoria">
-                                        <option value="">Selecione</option>
-                                        {% for c in categorias_options %}
-                                            <option value="{{ c }}" {% if mov.categoria==c %}selected{% endif %}>{{ c }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <input name="destino" value="{{ mov.destino or '' }}">
-                                    <input name="destinatario" value="{{ mov.destinatario }}" required>
-                                    <input type="number" name="quantidade" value="{{ mov.quantidade }}" min="1" required>
-                                    <input type="date" name="data_pedido">
-                                    <input type="number" step="0.01" name="custo_unitario" value="{{ mov.custo or 0 }}" required>
-                                    <select name="status">
-                                        <option value="pendente" {% if mov.status=='pendente' %}selected{% endif %}>Pendente</option>
-                                        <option value="enviado" {% if mov.status=='enviado' %}selected{% endif %}>A Caminho</option>
-                                        <option value="entregue" {% if mov.status=='entregue' %}selected{% endif %}>Entregue</option>
-                                    </select>
-                                    <input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png">
-                                    <input type="file" name="foto" accept=".jpg,.jpeg,.png">
-                                    <button class="btn" type="submit">Salvar</button>
-                                </form>
-                                <form method="post" action="/compras/{{ mov.compra_id }}/deletar" onsubmit="return confirm('Excluir compra?');">
-                                    <button class="btn danger" type="submit">Excluir</button>
-                                </form>
-                            </details>
-                        {% elif mov.tipo == "Entrada Manual" %}
-                            <details>
-                                <summary>Ações</summary>
-                                <form method="post" action="/entradas/{{ mov.entrada_id }}/editar" enctype="multipart/form-data" class="form-grid">
-                                    <input type="number" name="quantidade" value="{{ mov.quantidade }}" min="1" required>
-                                    <input name="destinatario" value="{{ mov.destinatario }}" required>
-                                    <input name="motivo" value="">
-                                    <input type="number" step="0.01" name="custo_unitario" value="{{ mov.custo or 0 }}">
-                                    <input type="file" name="nota_fiscal" accept=".pdf,.jpg,.jpeg,.png">
-                                    <input type="file" name="foto" accept=".jpg,.jpeg,.png">
-                                    <button class="btn" type="submit">Salvar</button>
-                                </form>
-                                <form method="post" action="/entradas/{{ mov.entrada_id }}/deletar" onsubmit="return confirm('Excluir entrada?');">
-                                    <button class="btn danger" type="submit">Excluir</button>
-                                </form>
-                            </details>
-                        {% else %}
-                            <span class="badge">Visualização</span>
-                        {% endif %}
-                    </td>
-                </tr>
-            {% else %}
-                <tr><td colspan="11">Nenhuma movimentação encontrada.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="inline-actions" style="justify-content: space-between; margin-top: 12px; flex-wrap: wrap;">
-        <div>Total: {{ total }} movimentacoes</div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
-            {% set prev_page = page - 1 %}
-            {% set next_page = page + 1 %}
-            {% if page > 1 %}
-                <a class="btn secondary" href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ prev_page }}">Anterior</a>
-            {% else %}
-                <span class="badge">Anterior</span>
-            {% endif %}
-            <span>Pagina {{ page }} / {{ total_pages }}</span>
-            {% if page < total_pages %}
-                <a class="btn secondary" href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ next_page }}">Proxima</a>
-            {% else %}
-                <span class="badge">Proxima</span>
-            {% endif %}
-        </div>
-    </div>
-</div>
 {% endblock %}

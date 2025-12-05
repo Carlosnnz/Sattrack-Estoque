@@ -1,73 +1,118 @@
 {% extends "base.html" %}
-{% block title %}Usuários{% endblock %}
+{% block title %}Usuarios{% endblock %}
 {% block content %}
 {% if erro %}
     <div class="alert error">
-        {% if erro == "senhas" %}As senhas não conferem.{% elif erro == "email" %}Email já existe.{% elif erro == "ultimo_admin" %}Não é possível excluir o último admin.{% else %}Erro ao salvar usuário.{% endif %}
+        {% if erro == "senhas" %}As senhas nao conferem.{% elif erro == "email" %}Email ja existe.{% elif erro == "ultimo_admin" %}Nao e possivel excluir o ultimo admin.{% else %}Erro ao salvar usuario.{% endif %}
     </div>
 {% endif %}
 {% if ok %}
     <div class="alert success">
-        {% if ok == "criado" %}Usuário criado.{% elif ok == "editado" %}Usuário atualizado.{% elif ok == "excluido" %}Usuário excluído.{% endif %}
+        {% if ok == "criado" %}Usuario criado.{% elif ok == "editado" %}Usuario atualizado.{% elif ok == "excluido" %}Usuario excluido.{% endif %}
     </div>
 {% endif %}
-<div class="grid two">
-    <div class="card">
-        <div class="card-header">Cadastrar Usuário</div>
-        <form method="post" action="/usuarios/criar" enctype="multipart/form-data" class="form-grid">
-            <label>Nome<input name="nome" required></label>
-            <label>Email<input type="email" name="email" required></label>
-            <label>Função
-                <select name="funcao">
-                    <option value="admin">Admin</option>
-                    <option value="comum" selected>Comum</option>
-                </select>
-            </label>
-            <label>Senha<input type="password" name="senha" required></label>
-            <label>Confirmar Senha<input type="password" name="confirmar_senha" required></label>
-            <label>Foto<input type="file" name="foto" accept=".jpg,.jpeg,.png"></label>
-            <button class="btn" type="submit">Salvar</button>
-        </form>
+
+<div class="user-page">
+    <div class="card toolbar-card">
+        <div class="toolbar-heading">
+            <div>
+                <p class="eyebrow">Equipe</p>
+                <h3>Usuarios</h3>
+                <p class="muted">Cadastre e gerencie acessos do time.</p>
+            </div>
+            <div class="pill ghost">Total: {{ users|length }}</div>
+        </div>
     </div>
-    <div class="card">
-        <div class="card-header">Usuários</div>
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr><th></th><th>Nome</th><th>Email</th><th>Função</th><th>Ações</th></tr>
-                </thead>
-                <tbody>
-                {% for u in users %}
-                    <tr>
-                        <td>{% if u.foto %}<img src="{{ u.foto }}" class="small-avatar" alt="foto">{% endif %}</td>
-                        <td>{{ u.nome }}</td>
-                        <td>{{ u.email }}</td>
-                        <td>{{ u.funcao }}</td>
-                        <td>
-                            <details>
-                                <summary>Editar</summary>
-                                <form method="post" action="/usuarios/{{ u.id }}/editar" enctype="multipart/form-data" class="form-grid">
-                                    <input name="nome" value="{{ u.nome }}" required>
-                                    <select name="funcao">
-                                        <option value="admin" {% if u.funcao == "admin" %}selected{% endif %}>Admin</option>
-                                        <option value="comum" {% if u.funcao == "comum" %}selected{% endif %}>Comum</option>
-                                    </select>
-                                    <input type="password" name="senha" placeholder="Nova senha (opcional)">
-                                    <input type="password" name="confirmar_senha" placeholder="Confirmar senha">
-                                    <input type="file" name="foto" accept=".jpg,.jpeg,.png">
-                                    <button class="btn" type="submit">Salvar</button>
-                                </form>
-                                <form method="post" action="/usuarios/{{ u.id }}/deletar" onsubmit="return confirm('Excluir usuário?');">
-                                    <button class="btn danger" type="submit">Excluir</button>
-                                </form>
-                            </details>
-                        </td>
-                    </tr>
-                {% else %}
-                    <tr><td colspan="5">Nenhum usuário.</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
+
+    <div class="grid two user-grid">
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Cadastrar</p>
+                    <h3>Usuario</h3>
+                </div>
+            </div>
+            <form method="post" action="/usuarios/criar" enctype="multipart/form-data" class="user-form">
+                <label>Nome<input name="nome" required placeholder="Ex: Ana Lima"></label>
+                <label>Email<input type="email" name="email" required placeholder="ana@empresa.com"></label>
+                <label>Funcao
+                    <select name="funcao">
+                        <option value="admin">Admin</option>
+                        <option value="comum" selected>Comum</option>
+                    </select>
+                </label>
+                <label>Foto<input type="file" name="foto" accept=".jpg,.jpeg,.png"></label>
+                <label>Senha<input type="password" name="senha" required placeholder="********"></label>
+                <label>Confirmar Senha<input type="password" name="confirmar_senha" required placeholder="********"></label>
+                <div class="form-actions">
+                    <button class="btn" type="submit"><i class="fi fi-rr-check"></i><span>Salvar usuario</span></button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Tabela</p>
+                    <h3>Usuarios cadastrados</h3>
+                </div>
+            </div>
+            <div class="table-responsive user-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Foto</th>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Funcao</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for u in users %}
+                        <tr class="row-link">
+                            <td class="avatar-cell">
+                                {% if u.foto %}
+                                    <img src="{{ u.foto }}" class="small-avatar rounded" alt="foto">
+                                {% else %}
+                                    <div class="avatar placeholder rounded">{{ u.nome[:1]|upper }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="strong">{{ u.nome }}</td>
+                            <td class="mono">{{ u.email }}</td>
+                            <td>
+                                {% if u.funcao == 'admin' %}
+                                    <span class="pill role-admin">Admin</span>
+                                {% else %}
+                                    <span class="pill role-comum">Comum</span>
+                                {% endif %}
+                            </td>
+                            <td class="actions">
+                                <details class="row-actions">
+                                    <summary title="Editar usuario"><i class="fi fi-rr-edit"></i></summary>
+                                    <form method="post" action="/usuarios/{{ u.id }}/editar" enctype="multipart/form-data" class="form-grid compact">
+                                        <input name="nome" value="{{ u.nome }}" required>
+                                        <select name="funcao">
+                                            <option value="admin" {% if u.funcao == "admin" %}selected{% endif %}>Admin</option>
+                                            <option value="comum" {% if u.funcao == "comum" %}selected{% endif %}>Comum</option>
+                                        </select>
+                                        <input type="password" name="senha" placeholder="Nova senha (opcional)">
+                                        <input type="password" name="confirmar_senha" placeholder="Confirmar senha">
+                                        <input type="file" name="foto" accept=".jpg,.jpeg,.png">
+                                        <button class="btn" type="submit">Salvar</button>
+                                    </form>
+                                    <form method="post" action="/usuarios/{{ u.id }}/deletar" onsubmit="return confirm('Excluir usuario?');">
+                                        <button class="btn danger" type="submit">Excluir</button>
+                                    </form>
+                                </details>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="5">Nenhum usuario.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>

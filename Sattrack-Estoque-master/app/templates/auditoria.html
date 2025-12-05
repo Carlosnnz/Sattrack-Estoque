@@ -1,68 +1,115 @@
 {% extends "base.html" %}
 {% block title %}Auditoria{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="card-header">Log de Operações</div>
-    <form method="get" action="/auditoria" class="filters-grid" style="margin-bottom:12px;">
-        <label>Operação<input name="operacao" value="{{ filtro_operacao }}"></label>
-        <label>Item<input name="item" value="{{ filtro_item }}"></label>
-        <label>Usuário<input name="usuario" value="{{ filtro_usuario }}"></label>
-        <label>Destinatário<input name="destinatario" value="{{ filtro_destinatario }}"></label>
-        <label>Fornecedor<input name="fornecedor" value="{{ filtro_fornecedor }}"></label>
-        <label>Data<input type="date" name="data" value="{{ filtro_data }}"></label>
-        <div class="inline-actions">
-            <button class="btn" type="submit">Filtrar</button>
-            <a class="btn secondary" href="/auditoria">Limpar</a>
+<div class="audit-page">
+    <div class="card toolbar-card">
+        <div class="toolbar-heading">
+            <div>
+                <p class="eyebrow">Logs</p>
+                <h3>Auditoria de operacoes</h3>
+                <p class="muted">Filtros rapidos por operacao, item, usuario e data.</p>
+            </div>
+            <div class="pill ghost">Total: {{ total }} registros</div>
         </div>
-    </form>
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>Operação</th><th>Item</th><th>Qtd</th><th>Usuário</th><th>Destinatário</th><th>Fornecedor</th><th>Custo</th><th>Data</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for log in logs %}
-                <tr>
-                    <td>{{ log.operacao }}</td>
-                    <td>
-                        {% if log.item_id %}
-                            {{ log.item_id }} - {{ items_map.get(log.item_id, 'sem nome') }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </td>
-                    <td>{{ log.quantidade }}</td>
-                    <td>{{ log.usuario }}</td>
-                    <td>{{ log.destinatario or '-' }}</td>
-                    <td>{{ log.fornecedor or '-' }}</td>
-                    <td>{% if log.custo is not none %}R$ {{ '%.2f'|format(log.custo) }}{% else %}-{% endif %}</td>
-                    <td>{{ log.created_at|datetime }}</td>
-                </tr>
-            {% else %}
-                <tr><td colspan="8">Sem registros.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+        <form method="get" action="/auditoria" class="filter-toolbar">
+            <div class="input-chip grow">
+                <i class="fi fi-rr-bolt"></i>
+                <input name="operacao" value="{{ filtro_operacao }}" placeholder="Operacao">
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-box"></i>
+                <input name="item" value="{{ filtro_item }}" placeholder="Item">
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-user"></i>
+                <input name="usuario" value="{{ filtro_usuario }}" placeholder="Usuario">
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-id-badge"></i>
+                <input name="destinatario" value="{{ filtro_destinatario }}" placeholder="Destinatario">
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-briefcase"></i>
+                <input name="fornecedor" value="{{ filtro_fornecedor }}" placeholder="Fornecedor">
+            </div>
+            <div class="input-chip">
+                <i class="fi fi-rr-calendar"></i>
+                <input type="date" name="data" value="{{ filtro_data }}">
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn ghost-btn" type="submit"><i class="fi fi-rr-search"></i><span>Filtrar</span></button>
+                <a class="btn tertiary" href="/auditoria"><i class="fi fi-rr-refresh"></i><span>Limpar</span></a>
+            </div>
+        </form>
     </div>
-    <div class="inline-actions" style="justify-content: space-between; margin-top: 12px;">
-        <div>Total: {{ total }} registros</div>
-        <div style="display:flex; gap:8px; align-items:center;">
-            {% set prev_page = page - 1 %}
-            {% set next_page = page + 1 %}
-            {% if page > 1 %}
-                <a class="btn secondary" href="/auditoria?operacao={{ filtro_operacao }}&item={{ filtro_item }}&usuario={{ filtro_usuario }}&destinatario={{ filtro_destinatario }}&fornecedor={{ filtro_fornecedor }}&data={{ filtro_data }}&page={{ prev_page }}">Anterior</a>
-            {% else %}
-                <span class="badge">Anterior</span>
-            {% endif %}
-            <span>Página {{ page }} / {{ total_pages }}</span>
-            {% if page < total_pages %}
-                <a class="btn secondary" href="/auditoria?operacao={{ filtro_operacao }}&item={{ filtro_item }}&usuario={{ filtro_usuario }}&destinatario={{ filtro_destinatario }}&fornecedor={{ filtro_fornecedor }}&data={{ filtro_data }}&page={{ next_page }}">Próxima</a>
-            {% else %}
-                <span class="badge">Próxima</span>
-            {% endif %}
+
+    <div class="card elevated">
+        <div class="table-responsive audit-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Operacao</th>
+                        <th>Item</th>
+                        <th>Qtd</th>
+                        <th>Usuario</th>
+                        <th>Destinatario</th>
+                        <th>Fornecedor</th>
+                        <th>Custo</th>
+                        <th>Data</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for log in logs %}
+                    {% set op = log.operacao|lower %}
+                    {% if op.startswith('criar') %}{% set op_class='op-create' %}
+                    {% elif op.startswith('editar') %}{% set op_class='op-edit' %}
+                    {% elif op.startswith('deletar') or op.startswith('excluir') %}{% set op_class='op-delete' %}
+                    {% elif op.startswith('saida') %}{% set op_class='op-out' %}
+                    {% elif op.startswith('entrada') %}{% set op_class='op-in' %}
+                    {% elif op.startswith('analise') %}{% set op_class='op-analysis' %}
+                    {% else %}{% set op_class='op-neutral' %}{% endif %}
+                    <tr class="row-link">
+                        <td><span class="pill op-pill {{ op_class }}">{{ log.operacao }}</span></td>
+                        <td>
+                            {% if log.item_id %}
+                                <div class="strong">{{ items_map.get(log.item_id, 'sem nome') }}</div>
+                                <div class="muted">ID {{ log.item_id }}</div>
+                            {% else %}-{% endif %}
+                        </td>
+                        <td class="mono">{{ log.quantidade }}</td>
+                        <td>{{ log.usuario }}</td>
+                        <td>{{ log.destinatario or '-' }}</td>
+                        <td>{{ log.fornecedor or '-' }}</td>
+                        <td class="mono">{% if log.custo is not none %}R$ {{ '%.2f'|format(log.custo) }}{% else %}-{% endif %}</td>
+                        <td class="mono">{{ log.created_at|datetime }}</td>
+                        <td class="actions">
+                            {% if log.dados %}
+                            <details class="row-actions">
+                                <summary title="Ver detalhes"><i class="fi fi-rr-eye"></i></summary>
+                                <pre class="json-block">{{ log.dados|tojson(indent=2) }}</pre>
+                            </details>
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="9">Sem registros.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
+        {% if total_pages > 1 %}
+        {% set qp = '&operacao=' ~ filtro_operacao ~ '&item=' ~ filtro_item ~ '&usuario=' ~ filtro_usuario ~ '&destinatario=' ~ filtro_destinatario ~ '&fornecedor=' ~ filtro_fornecedor ~ '&data=' ~ filtro_data %}
+        <div class="pagination modern" style="justify-content: space-between; flex-wrap: wrap;">
+            <div class="page-info strong">Pagina {{ page }} / {{ total_pages }}</div>
+            <div class="inline-actions">
+                {% set prev_page = page - 1 %}
+                {% set next_page = page + 1 %}
+                <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/auditoria?page={{ prev_page }}{{ qp }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
+                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/auditoria?page={{ next_page }}{{ qp }}"{% endif %}>Proxima <i class="fi fi-rr-angle-right"></i></a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

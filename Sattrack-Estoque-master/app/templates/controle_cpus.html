@@ -1,214 +1,249 @@
 {% extends "base.html" %}
 {% block title %}Controle de CPUs{% endblock %}
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <div>
-            <h2 style="margin:0;">Controle de CPUs</h2>
-            <p style="margin:4px 0 0;color:var(--muted);">Gerenciamento dos computadores por setor, filial e especificacoes tecnicas.</p>
+<div class="cpu-page">
+    <div class="card toolbar-card">
+        <div class="toolbar-heading">
+            <div>
+                <p class="eyebrow">Infraestrutura</p>
+                <h3>Controle de CPUs</h3>
+                <p class="muted">Gerencie colaboradores, filiais e especificacoes tecnicas em um so lugar.</p>
+            </div>
+            <div class="pill ghost">Total: {{ total }} registros</div>
+        </div>
+        <div class="cpu-stats-grid">
+            <div class="cpu-stat-card strong">
+                <div class="icon-wrap"><i class="fi fi-rr-laptop"></i></div>
+                <div>
+                    <p class="muted">NOVA-FORTE</p>
+                    <div class="stat-value">{{ categoria_counts.get('NOVA-FORTE', 0) }}</div>
+                </div>
+            </div>
+            <div class="cpu-stat-card mid">
+                <div class="icon-wrap"><i class="fi fi-rr-laptop"></i></div>
+                <div>
+                    <p class="muted">NOVA</p>
+                    <div class="stat-value">{{ categoria_counts.get('NOVA', 0) }}</div>
+                </div>
+            </div>
+            <div class="cpu-stat-card weak">
+                <div class="icon-wrap"><i class="fi fi-rr-laptop"></i></div>
+                <div>
+                    <p class="muted">FRACA-ANTIGA</p>
+                    <div class="stat-value">{{ categoria_counts.get('FRACA-ANTIGA', 0) }}</div>
+                </div>
+            </div>
+            {% for filial, total in filial_counts.items() %}
+            <div class="cpu-stat-card neutral">
+                <div class="icon-wrap"><i class="fi fi-rr-building"></i></div>
+                <div>
+                    <p class="muted">{{ filial }}</p>
+                    <div class="stat-value">{{ total }} maquinas</div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
+
     {% if erro == 'tag' %}
         <div class="alert error">TAG ja existe. Use um codigo de patrimonio unico.</div>
     {% endif %}
-    <div class="grid stats" style="margin-bottom:12px;">
-        <div class="card stat-card">
-            <p class="stat-label" style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;"><i class="fi fi-rr-chart-pie"></i><span>NOVA-FORTE</span></p>
-            <div class="stat-value" style="color:#166534;">{{ categoria_counts.get('NOVA-FORTE', 0) }}</div>
-        </div>
-        <div class="card stat-card">
-            <p class="stat-label" style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;"><i class="fi fi-rr-chart-pie"></i><span>NOVA</span></p>
-            <div class="stat-value" style="color:#0369a1;">{{ categoria_counts.get('NOVA', 0) }}</div>
-        </div>
-        <div class="card stat-card">
-            <p class="stat-label" style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;"><i class="fi fi-rr-chart-pie"></i><span>FRACA-ANTIGA</span></p>
-            <div class="stat-value" style="color:#b91c1c;">{{ categoria_counts.get('FRACA-ANTIGA', 0) }}</div>
-        </div>
-        {% for filial, total in filial_counts.items() %}
-            <div class="card stat-card">
-                <p class="stat-label" style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;"><i class="fi fi-rr-layers"></i><span>{{ filial }}</span></p>
-                <div class="stat-value">{{ total }} maquinas</div>
+
+    <div class="grid two cpu-grid">
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Cadastrar</p>
+                    <h3>CPU</h3>
+                </div>
             </div>
-        {% endfor %}
+            <form action="/controle-cpus/criar" method="post" class="cpu-form">
+                <label>Nome do Colaborador<input name="nome" required placeholder="Ex: Maria Souza"></label>
+                <label>Setor
+                    <select name="setor" required>
+                        <option value="">Selecione</option>
+                        {% for s in setores_options %}
+                            <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Filial
+                    <select name="filial" required>
+                        <option value="">Selecione</option>
+                        {% for f in filiais_options %}
+                            <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Categoria
+                    <select name="categoria" required>
+                        <option value="NOVA-FORTE">NOVA-FORTE</option>
+                        <option value="NOVA">NOVA</option>
+                        <option value="FRACA-ANTIGA">FRACA-ANTIGA</option>
+                    </select>
+                </label>
+                <label>TAG<input name="tag" placeholder="SAT-43021" required></label>
+                <label>Processador<input name="processador" placeholder="i5-10400, Ryzen 5" required></label>
+                <label>Memoria RAM<input name="memoria_ram" placeholder="8 GB, 16 GB" required></label>
+                <label>Placa de Video<input name="placa_video" placeholder="Integrada, GTX 1050" required></label>
+                <label>Anydesk<input name="anydesk" required placeholder="000 000 000"></label>
+                <label class="span-2">Observacoes
+                    <textarea name="observacoes" placeholder="Opcional"></textarea>
+                </label>
+                <div class="form-actions">
+                    <button class="btn" type="submit"><i class="fi fi-rr-check"></i><span>Salvar CPU</span></button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Filtros</p>
+                    <h3>Listagem</h3>
+                </div>
+            </div>
+            <form method="get" action="/controle-cpus" class="filter-toolbar">
+                <input type="hidden" name="sort" value="{{ filtro_sort }}">
+                <input type="hidden" name="dir" value="{{ filtro_dir }}">
+                <div class="input-chip select-chip">
+                    <i class="fi fi-rr-layers"></i>
+                    <select name="setor">
+                        <option value="" {% if not filtro_setor %}selected{% endif %}>Setor</option>
+                        {% for s in setores_options %}
+                            <option value="{{ s }}" {% if filtro_setor == s %}selected{% endif %}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="input-chip select-chip">
+                    <i class="fi fi-rr-building"></i>
+                    <select name="filial">
+                        <option value="" {% if not filtro_filial %}selected{% endif %}>Filial</option>
+                        {% for f in filiais_options %}
+                            <option value="{{ f }}" {% if filtro_filial == f %}selected{% endif %}>{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="input-chip select-chip">
+                    <i class="fi fi-rr-badge-check"></i>
+                    <select name="categoria">
+                        <option value="" {% if not filtro_categoria %}selected{% endif %}>Categoria</option>
+                        {% for c in categorias %}
+                            <option value="{{ c }}" {% if filtro_categoria == c %}selected{% endif %}>{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="input-chip grow">
+                    <i class="fi fi-rr-user"></i>
+                    <input name="nome" value="{{ filtro_nome }}" placeholder="Nome">
+                </div>
+                <div class="input-chip">
+                    <i class="fi fi-rr-barcode"></i>
+                    <input name="tag" value="{{ filtro_tag }}" placeholder="TAG">
+                </div>
+                <div class="input-chip grow">
+                    <i class="fi fi-rr-search"></i>
+                    <input name="busca" placeholder="nome / TAG / processador" value="{{ filtro_busca }}">
+                </div>
+                <div class="toolbar-actions">
+                    <button class="btn ghost-btn" type="submit"><i class="fi fi-rr-search"></i><span>Filtrar</span></button>
+                    <a class="btn tertiary" href="/controle-cpus"><i class="fi fi-rr-refresh"></i><span>Limpar</span></a>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div class="card" style="margin-bottom:12px;">
-        <form action="/controle-cpus/criar" method="post" class="form-grid">
-            <label>Nome do Colaborador<input name="nome" required></label>
-            <label>Setor
-                <select name="setor" required>
-                    <option value="">Selecione</option>
-                    {% for s in setores_options %}
-                        <option value="{{ s }}">{{ s }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Filial
-                <select name="filial" required>
-                    <option value="">Selecione</option>
-                    {% for f in filiais_options %}
-                        <option value="{{ f }}">{{ f }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>TAG<input name="tag" placeholder="SAT-43021" required></label>
-            <label>Processador<input name="processador" placeholder="AMD 3000G, i5-10400" required></label>
-            <label>Memoria RAM<input name="memoria_ram" placeholder="8 GB, 16 GB" required></label>
-            <label>Placa de Video<input name="placa_video" placeholder="Integrada, GTX 1050" required></label>
-            <label>Categoria
-                <select name="categoria" required>
-                    <option value="NOVA-FORTE">NOVA-FORTE</option>
-                    <option value="NOVA">NOVA</option>
-                    <option value="FRACA-ANTIGA">FRACA-ANTIGA</option>
-                </select>
-            </label>
-            <label>Anydesk<input name="anydesk" required></label>
-            <label>Observacoes
-                <textarea name="observacoes" placeholder="Opcional"></textarea>
-            </label>
+    <div class="card elevated">
+        <div class="table-responsive cpu-table">
+            <table>
+                <thead>
+                    {% set base_params = 'setor=' ~ filtro_setor ~ '&filial=' ~ filtro_filial ~ '&categoria=' ~ filtro_categoria ~ '&nome=' ~ filtro_nome ~ '&tag=' ~ filtro_tag ~ '&busca=' ~ filtro_busca %}
+                    {% set dir_nome = 'desc' if filtro_sort == 'nome' and filtro_dir == 'asc' else 'asc' %}
+                    {% set dir_tag = 'desc' if filtro_sort == 'tag' and filtro_dir == 'asc' else 'asc' %}
+                    <tr>
+                        <th>
+                            <a class="sortable {% if filtro_sort == 'nome' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=nome&dir={{ dir_nome }}">
+                                Nome
+                                <span class="caret">{% if filtro_sort == "nome" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
+                            </a>
+                        </th>
+                        <th>Setor</th>
+                        <th>Filial</th>
+                        <th>
+                            <a class="sortable {% if filtro_sort == 'tag' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=tag&dir={{ dir_tag }}">
+                                TAG
+                                <span class="caret">{% if filtro_sort == "tag" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
+                            </a>
+                        </th>
+                        <th>Processador</th>
+                        <th>Memoria RAM</th>
+                        <th>Placa de Video</th>
+                        <th>Categoria</th>
+                        <th>Anydesk</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for cpu in cpus %}
+                    <tr class="row-link">
+                        <td>{{ cpu.nome }}</td>
+                        <td>{{ cpu.setor }}</td>
+                        <td>{{ cpu.filial }}</td>
+                        <td class="mono strong">{{ cpu.tag }}</td>
+                        <td>{{ cpu.processador }}</td>
+                        <td>{{ cpu.memoria_ram }}</td>
+                        <td>{{ cpu.placa_video }}</td>
+                        <td>
+                            {% if cpu.categoria == 'NOVA-FORTE' %}
+                                <span class="pill cpu-strong">{{ cpu.categoria }}</span>
+                            {% elif cpu.categoria == 'NOVA' %}
+                                <span class="pill cpu-mid">{{ cpu.categoria }}</span>
+                            {% else %}
+                                <span class="pill cpu-weak">{{ cpu.categoria }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="mono">{{ cpu.anydesk }}</td>
+                        <td class="actions">
+                            <details class="row-actions">
+                                <summary title="Editar"><i class="fi fi-rr-edit"></i></summary>
+                                <form method="post" action="/controle-cpus/{{ cpu.id }}/editar" class="form-grid compact">
+                                    <input name="nome" value="{{ cpu.nome }}" required>
+                                    <input name="setor" value="{{ cpu.setor }}" required>
+                                    <input name="filial" value="{{ cpu.filial }}" required>
+                                    <input name="tag" value="{{ cpu.tag }}" required>
+                                    <input name="processador" value="{{ cpu.processador }}" required>
+                                    <input name="memoria_ram" value="{{ cpu.memoria_ram }}" required>
+                                    <input name="placa_video" value="{{ cpu.placa_video }}" required>
+                                    <select name="categoria" required>
+                                        {% for c in categorias %}
+                                            <option value="{{ c }}" {% if cpu.categoria == c %}selected{% endif %}>{{ c }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <input name="anydesk" value="{{ cpu.anydesk }}" required>
+                                    <textarea name="observacoes" placeholder="Opcional">{{ cpu.observacoes or '' }}</textarea>
+                                    <button class="btn" type="submit">Salvar</button>
+                                </form>
+                                <form method="post" action="/controle-cpus/{{ cpu.id }}/deletar" onsubmit="return confirm('Excluir CPU?');">
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </details>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="10">Nenhuma CPU cadastrada.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination modern" style="justify-content: space-between; flex-wrap: wrap;">
+            <div class="page-info strong">Pagina {{ page }} / {{ total_pages }}</div>
             <div class="inline-actions">
-                <button class="btn" type="submit">Salvar CPU</button>
+                {% set prev_page = page - 1 %}
+                {% set next_page = page + 1 %}
+                {% set sort_params = '&sort=' ~ filtro_sort ~ '&dir=' ~ filtro_dir %}
+                <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ prev_page }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
+                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ next_page }}"{% endif %}>Proxima <i class="fi fi-rr-angle-right"></i></a>
             </div>
-        </form>
-    </div>
-
-    <div class="card" style="margin-bottom:12px;">
-        <div class="card-header">Filtros</div>
-        <form method="get" action="/controle-cpus" class="filters-grid">
-            <input type="hidden" name="sort" value="{{ filtro_sort }}">
-            <input type="hidden" name="dir" value="{{ filtro_dir }}">
-            <label>Setor
-                <select name="setor">
-                    <option value="" {% if not filtro_setor %}selected{% endif %}>Todos</option>
-                    {% for s in setores_options %}
-                        <option value="{{ s }}" {% if filtro_setor == s %}selected{% endif %}>{{ s }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Filial
-                <select name="filial">
-                    <option value="" {% if not filtro_filial %}selected{% endif %}>Todas</option>
-                    {% for f in filiais_options %}
-                        <option value="{{ f }}" {% if filtro_filial == f %}selected{% endif %}>{{ f }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Categoria
-                <select name="categoria">
-                    <option value="" {% if not filtro_categoria %}selected{% endif %}>Todas</option>
-                    {% for c in categorias %}
-                        <option value="{{ c }}" {% if filtro_categoria == c %}selected{% endif %}>{{ c }}</option>
-                    {% endfor %}
-                </select>
-            </label>
-            <label>Nome<input name="nome" value="{{ filtro_nome }}"></label>
-            <label>TAG<input name="tag" value="{{ filtro_tag }}"></label>
-            <label>Busca Geral<input name="busca" placeholder="nome/TAG/processador" value="{{ filtro_busca }}"></label>
-            <div class="inline-actions">
-                <button class="btn" type="submit">Filtrar</button>
-                <a class="btn secondary" href="/controle-cpus">Limpar</a>
-            </div>
-        </form>
-    </div>
-
-    <div class="table-responsive">
-        <table>
-            <thead>
-                {% set base_params = 'setor=' ~ filtro_setor ~ '&filial=' ~ filtro_filial ~ '&categoria=' ~ filtro_categoria ~ '&nome=' ~ filtro_nome ~ '&tag=' ~ filtro_tag ~ '&busca=' ~ filtro_busca %}
-                {% set dir_nome = 'desc' if filtro_sort == 'nome' and filtro_dir == 'asc' else 'asc' %}
-                {% set dir_tag = 'desc' if filtro_sort == 'tag' and filtro_dir == 'asc' else 'asc' %}
-                <tr>
-                    <th>
-                        <a class="sortable {% if filtro_sort == 'nome' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=nome&dir={{ dir_nome }}">
-                            Nome
-                            <span class="caret">{% if filtro_sort == "nome" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
-                        </a>
-                    </th>
-                    <th>Setor</th>
-                    <th>Filial</th>
-                    <th>
-                        <a class="sortable {% if filtro_sort == 'tag' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=tag&dir={{ dir_tag }}">
-                            TAG
-                            <span class="caret">{% if filtro_sort == "tag" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
-                        </a>
-                    </th>
-                    <th>Processador</th>
-                    <th>Memória RAM</th>
-                    <th>Placa de Vídeo</th>
-                    <th>Categoria</th>
-                    <th>Anydesk</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for cpu in cpus %}
-                <tr>
-                    <td>{{ cpu.nome }}</td>
-                    <td>{{ cpu.setor }}</td>
-                    <td>{{ cpu.filial }}</td>
-                    <td>{{ cpu.tag }}</td>
-                    <td>{{ cpu.processador }}</td>
-                    <td>{{ cpu.memoria_ram }}</td>
-                    <td>{{ cpu.placa_video }}</td>
-                    <td>
-                        {% if cpu.categoria == 'NOVA-FORTE' %}
-                            <span class="pill" style="background:#ecfdf3;color:#166534;">{{ cpu.categoria }}</span>
-                        {% elif cpu.categoria == 'NOVA' %}
-                            <span class="pill" style="background:#e0f2fe;color:#0369a1;">{{ cpu.categoria }}</span>
-                        {% else %}
-                            <span class="pill" style="background:#fef2f2;color:#b91c1c;">{{ cpu.categoria }}</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ cpu.anydesk }}</td>
-                    <td>
-                        <details>
-                            <summary>Editar</summary>
-                            <form method="post" action="/controle-cpus/{{ cpu.id }}/editar" class="form-grid">
-                                <input name="nome" value="{{ cpu.nome }}" required>
-                                <input name="setor" value="{{ cpu.setor }}" required>
-                                <input name="filial" value="{{ cpu.filial }}" required>
-                                <input name="tag" value="{{ cpu.tag }}" required>
-                                <input name="processador" value="{{ cpu.processador }}" required>
-                                <input name="memoria_ram" value="{{ cpu.memoria_ram }}" required>
-                                <input name="placa_video" value="{{ cpu.placa_video }}" required>
-                                <select name="categoria" required>
-                                    {% for c in categorias %}
-                                        <option value="{{ c }}" {% if cpu.categoria == c %}selected{% endif %}>{{ c }}</option>
-                                    {% endfor %}
-                                </select>
-                                <input name="anydesk" value="{{ cpu.anydesk }}" required>
-                                <textarea name="observacoes" placeholder="Opcional">{{ cpu.observacoes or '' }}</textarea>
-                                <button class="btn" type="submit">Salvar</button>
-                            </form>
-                            <form method="post" action="/controle-cpus/{{ cpu.id }}/deletar" onsubmit="return confirm('Excluir CPU?');">
-                                <button class="btn danger" type="submit">Excluir</button>
-                            </form>
-                        </details>
-                    </td>
-                </tr>
-            {% else %}
-                <tr><td colspan="10">Nenhuma CPU cadastrada.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="inline-actions" style="justify-content: space-between; margin-top: 12px;">
-        <div>Total: {{ total }} registros</div>
-        <div style="display:flex; gap:8px; align-items:center;">
-            {% set prev_page = page - 1 %}
-            {% set next_page = page + 1 %}
-            {% set sort_params = '&sort=' ~ filtro_sort ~ '&dir=' ~ filtro_dir %}
-            {% if page > 1 %}
-                <a class="btn secondary" href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ prev_page }}">Anterior</a>
-            {% else %}
-                <span class="badge">Anterior</span>
-            {% endif %}
-            <span>Pagina {{ page }} / {{ total_pages }}</span>
-            {% if page < total_pages %}
-                <a class="btn secondary" href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ next_page }}">Proxima</a>
-            {% else %}
-                <span class="badge">Proxima</span>
-            {% endif %}
         </div>
     </div>
 </div>

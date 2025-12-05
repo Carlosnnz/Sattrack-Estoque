@@ -1,131 +1,164 @@
 {% extends "base.html" %}
 {% block title %}Saidas{% endblock %}
 {% block content %}
-<div class="grid two">
-    <div class="card">
-        <div class="card-header">Registrar Saida</div>
-        <form method="post" action="/saidas/registrar" class="form-grid">
-            <label>Item
-                <select name="item_id" required>
-                    <option value="">Selecione</option>
+<div class="mov-page">
+    <div class="card toolbar-card">
+        <div class="toolbar-heading">
+            <div>
+                <p class="eyebrow">Visao rapida</p>
+                <h3>Saidas</h3>
+            </div>
+            <div class="pill ghost">Total: {{ total_saidas }} registros</div>
+        </div>
+        <form method="get" action="/saidas" class="filter-toolbar">
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-search-alt"></i>
+                <select name="item_id">
+                    <option value="">Item</option>
                     {% for item in itens %}
-                        <option value="{{ item.id }}">{{ item.descricao }} ({{ item.codigo_interno }})</option>
+                        <option value="{{ item.id }}" {% if f_item_id|int == item.id %}selected{% endif %}>{{ item.descricao }}</option>
                     {% endfor %}
                 </select>
-            </label>
-            <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
-            <input type="hidden" name="destino" id="destino_saida_hidden">
-            <label>Filial
-                <select id="filial_saida_select">
-                    <option value="">Selecione</option>
+            </div>
+            <div class="input-chip">
+                <i class="fi fi-rr-hashtag"></i>
+                <input type="number" name="quantidade" min="1" value="{{ f_quantidade }}" placeholder="Qtd">
+            </div>
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-building"></i>
+                <select name="filial">
+                    <option value="">Filial</option>
                     {% for f in filiais_options %}
-                        <option value="{{ f }}">{{ f }}</option>
+                        <option value="{{ f }}" {% if f_filial == f %}selected{% endif %}>{{ f }}</option>
                     {% endfor %}
                 </select>
-            </label>
-            <label>Setor
-                <select id="setor_saida_select">
-                    <option value="">Selecione</option>
+            </div>
+            <div class="input-chip select-chip">
+                <i class="fi fi-rr-layers"></i>
+                <select name="setor">
+                    <option value="">Setor</option>
                     {% for s in setores_options %}
-                        <option value="{{ s }}">{{ s }}</option>
+                        <option value="{{ s }}" {% if f_setor == s %}selected{% endif %}>{{ s }}</option>
                     {% endfor %}
                 </select>
-            </label>
-            <label>Motivo<input name="motivo"></label>
-            <button class="btn" type="submit">Registrar</button>
+            </div>
+            <div class="input-chip grow">
+                <i class="fi fi-rr-comment-alt"></i>
+                <input type="text" name="motivo" value="{{ f_motivo }}" placeholder="Motivo">
+            </div>
+            <div class="toolbar-actions">
+                <button class="btn ghost-btn" type="submit"><i class="fi fi-rr-search"></i><span>Filtrar</span></button>
+                <a class="btn tertiary" href="/saidas"><i class="fi fi-rr-refresh"></i><span>Limpar</span></a>
+            </div>
         </form>
     </div>
-    <div class="card">
-        <div class="card-header">Saidas nos ultimos 30 dias</div>
-        <div class="chart-container"><canvas id="chart-saidas"></canvas></div>
-        <p class="stat-sub" style="margin:8px 0 0">Total no periodo: <strong id="saidas-total">--</strong></p>
-        <p class="stat-sub" style="margin:2px 0 0; color:#4b5563;">Atualize a pagina para novos dados.</p>
-    </div>
-</div>
 
-<div class="card" style="margin-top:12px;">
-    <div class="card-header">Ultimas Saidas</div>
-    <form method="get" action="/saidas" class="filters-grid" style="margin-bottom:8px;">
-        <label>Item
-            <select name="item_id">
-                <option value="">Selecione</option>
-                {% for item in itens %}
-                    <option value="{{ item.id }}" {% if f_item_id|int == item.id %}selected{% endif %}>{{ item.descricao }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Quantidade
-            <input type="number" name="quantidade" min="1" value="{{ f_quantidade }}">
-        </label>
-        <label>Filial
-            <select name="filial">
-                <option value="">Selecione</option>
-                {% for f in filiais_options %}
-                    <option value="{{ f }}" {% if f_filial == f %}selected{% endif %}>{{ f }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Setor
-            <select name="setor">
-                <option value="">Selecione</option>
-                {% for s in setores_options %}
-                    <option value="{{ s }}" {% if f_setor == s %}selected{% endif %}>{{ s }}</option>
-                {% endfor %}
-            </select>
-        </label>
-        <label>Motivo
-            <input type="text" name="motivo" value="{{ f_motivo }}">
-        </label>
-        <div style="display:flex;gap:8px;align-items:flex-end;">
-            <button class="btn" type="submit">Filtrar</button>
-            <a class="btn secondary" href="/saidas">Limpar</a>
+    <div class="grid two mov-grid">
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Registrar</p>
+                    <h3>Saida</h3>
+                </div>
+            </div>
+            <form method="post" action="/saidas/registrar" class="mov-form">
+                <label>Item
+                    <select name="item_id" required>
+                        <option value="">Selecione</option>
+                        {% for item in itens %}
+                            <option value="{{ item.id }}">{{ item.descricao }} ({{ item.codigo_interno }})</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
+                <input type="hidden" name="destino" id="destino_saida_hidden">
+                <label>Filial
+                    <select id="filial_saida_select">
+                        <option value="">Selecione</option>
+                        {% for f in filiais_options %}
+                            <option value="{{ f }}">{{ f }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Setor
+                    <select id="setor_saida_select">
+                        <option value="">Selecione</option>
+                        {% for s in setores_options %}
+                            <option value="{{ s }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Motivo<input name="motivo" placeholder="Opcional"></label>
+                <div class="form-actions">
+                    <button class="btn" type="submit"><i class="fi fi-rr-check"></i><span>Registrar</span></button>
+                </div>
+            </form>
         </div>
-    </form>
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th><th>Qtd</th><th>Filial/Setor</th><th>Usuario</th><th>Motivo</th><th>Data</th><th>Acoes</th>
-                </tr>
-            </thead>
-            <tbody>
-            {% for s in saidas %}
-                <tr>
-                    <td>{{ s.item.descricao if s.item else s.item_id }}</td>
-                    <td>{{ s.quantidade }}</td>
-                    <td>{{ s.destino }}</td>
-                    <td>{{ s.usuario }}</td>
-                    <td>{{ s.motivo }}</td>
-                    <td>{{ s.created_at|datetime }}</td>
-                    <td>
-                        <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saida e ajustar estoque?');">
-                            <button class="btn danger" type="submit">Excluir</button>
-                        </form>
-                    </td>
-                </tr>
-            {% else %}
-                <tr><td colspan="7">Nenhum registro.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+        <div class="card elevated">
+            <div class="card-header spaced">
+                <div>
+                    <p class="eyebrow">Saidas</p>
+                    <h3>Ultimos 30 dias</h3>
+                </div>
+                <div class="pill ghost">Atualize para novos dados</div>
+            </div>
+            <div class="chart-container"><canvas id="chart-saidas"></canvas></div>
+            <div class="chart-meta">
+                <span class="muted">Total: <strong id="saidas-total">--</strong></span>
+            </div>
+        </div>
     </div>
-    {% if pages > 1 %}
-    {% set qp = '&item_id=' ~ f_item_id ~ '&quantidade=' ~ f_quantidade ~ '&filial=' ~ f_filial ~ '&setor=' ~ f_setor ~ '&motivo=' ~ f_motivo %}
-    <div class="pagination pagination-compact">
-        <span class="page-info strong">Pagina {{ page }} / {{ pages }}</span>
-        <span class="page-info">• {{ total_saidas }} registros</span>
-        {% if page > 1 %}
-            <a class="page-btn" href="/saidas?page={{ page - 1 }}{{ qp }}">Anterior</a>
-        {% else %}
-            <span class="page-btn disabled">Anterior</span>
-        {% endif %}
-        {% if page < pages %}
-            <a class="page-btn primary" href="/saidas?page={{ page + 1 }}{{ qp }}">Proxima</a>
-        {% else %}
-            <span class="page-btn disabled">Proxima</span>
+
+    <div class="card elevated">
+        <div class="card-header spaced">
+            <div>
+                <p class="eyebrow">Historico</p>
+                <h3>Ultimas sa?das</h3>
+            </div>
+        </div>
+        <div class="table-responsive mov-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Qtd</th>
+                        <th>Filial/Setor</th>
+                        <th>Usuario</th>
+                        <th>Motivo</th>
+                        <th>Data</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for s in saidas %}
+                    <tr class="row-link">
+                        <td>{{ s.item.descricao if s.item else s.item_id }}</td>
+                        <td><span class="pill ghost">{{ s.quantidade }}</span></td>
+                        <td>{{ s.destino }}</td>
+                        <td>{{ s.usuario }}</td>
+                        <td>{{ s.motivo }}</td>
+                        <td>{{ s.created_at|datetime }}</td>
+                        <td class="actions">
+                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saida e ajustar estoque?');">
+                                <button class="btn icon-only danger" type="submit" title="Excluir"><i class="fi fi-rr-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7">Nenhum registro.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if pages > 1 %}
+        {% set qp = '&item_id=' ~ f_item_id ~ '&quantidade=' ~ f_quantidade ~ '&filial=' ~ f_filial ~ '&setor=' ~ f_setor ~ '&motivo=' ~ f_motivo %}
+        <div class="pagination modern">
+            <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/saidas?page={{ page - 1 }}{{ qp }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
+            <span class="page-info strong">Pagina {{ page }} / {{ pages }}</span>
+            <a class="page-btn {% if page == pages %}disabled{% endif %}" {% if page < pages %}href="/saidas?page={{ page + 1 }}{{ qp }}"{% endif %}>Proxima <i class="fi fi-rr-angle-right"></i></a>
+        </div>
         {% endif %}
     </div>
-    {% endif %}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -143,7 +176,7 @@
         }
 
         const chartContainer = document.getElementById('chart-saidas').parentElement;
-        chartContainer.style.height = '340px';
+        chartContainer.style.height = '320px';
 
         try {
             const serie = await fetch('/api/saidas/serie?days=30').then(r => r.json());
@@ -153,7 +186,7 @@
             }
             const ctx = document.getElementById('chart-saidas').getContext('2d');
             const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height || 320);
-            gradient.addColorStop(0, 'rgba(239,68,68,0.35)');
+            gradient.addColorStop(0, 'rgba(239,68,68,0.32)');
             gradient.addColorStop(1, 'rgba(239,68,68,0.06)');
 
             new Chart(ctx, {
@@ -165,9 +198,9 @@
                         data: serie.quantidades,
                         borderColor: '#ef4444',
                         backgroundColor: gradient,
-                        borderWidth: 2.5,
-                        pointRadius: 4,
-                        pointHoverRadius: 6,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
                         pointBackgroundColor: '#ffffff',
                         pointBorderColor: '#ef4444',
                         pointBorderWidth: 2,
