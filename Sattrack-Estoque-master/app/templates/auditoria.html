@@ -6,15 +6,15 @@
         <div class="toolbar-heading">
             <div>
                 <p class="eyebrow">Logs</p>
-                <h3>Auditoria de operacoes</h3>
-                <p class="muted">Filtros rapidos por operacao, item, usuario e data.</p>
+                <h3>Auditoria de operações</h3>
+                <p class="muted">Filtros rápidos por operação, item, usuário e data.</p>
             </div>
             <div class="pill ghost">Total: {{ total }} registros</div>
         </div>
         <form method="get" action="/auditoria" class="filter-toolbar">
             <div class="input-chip grow">
                 <i class="fi fi-rr-bolt"></i>
-                <input name="operacao" value="{{ filtro_operacao }}" placeholder="Operacao">
+                <input name="operacao" value="{{ filtro_operacao }}" placeholder="Operação">
             </div>
             <div class="input-chip grow">
                 <i class="fi fi-rr-box"></i>
@@ -22,11 +22,11 @@
             </div>
             <div class="input-chip grow">
                 <i class="fi fi-rr-user"></i>
-                <input name="usuario" value="{{ filtro_usuario }}" placeholder="Usuario">
+                <input name="usuario" value="{{ filtro_usuario }}" placeholder="Usuário">
             </div>
             <div class="input-chip grow">
                 <i class="fi fi-rr-id-badge"></i>
-                <input name="destinatario" value="{{ filtro_destinatario }}" placeholder="Destinatario">
+                <input name="destinatario" value="{{ filtro_destinatario }}" placeholder="Destinatário">
             </div>
             <div class="input-chip grow">
                 <i class="fi fi-rr-briefcase"></i>
@@ -48,11 +48,11 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Operacao</th>
+                        <th>Operação</th>
                         <th>Item</th>
                         <th>Qtd</th>
-                        <th>Usuario</th>
-                        <th>Destinatario</th>
+                        <th>Usuário</th>
+                        <th>Destinatário</th>
                         <th>Fornecedor</th>
                         <th>Custo</th>
                         <th>Data</th>
@@ -101,12 +101,12 @@
         {% if total_pages > 1 %}
         {% set qp = '&operacao=' ~ filtro_operacao ~ '&item=' ~ filtro_item ~ '&usuario=' ~ filtro_usuario ~ '&destinatario=' ~ filtro_destinatario ~ '&fornecedor=' ~ filtro_fornecedor ~ '&data=' ~ filtro_data %}
         <div class="pagination modern" style="justify-content: space-between; flex-wrap: wrap;">
-            <div class="page-info strong">Pagina {{ page }} / {{ total_pages }}</div>
+            <div class="page-info strong">Página {{ page }} / {{ total_pages }}</div>
             <div class="inline-actions">
                 {% set prev_page = page - 1 %}
                 {% set next_page = page + 1 %}
                 <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/auditoria?page={{ prev_page }}{{ qp }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
-                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/auditoria?page={{ next_page }}{{ qp }}"{% endif %}>Proxima <i class="fi fi-rr-angle-right"></i></a>
+                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/auditoria?page={{ next_page }}{{ qp }}"{% endif %}>Próxima <i class="fi fi-rr-angle-right"></i></a>
             </div>
         </div>
         {% endif %}

@@ -10,21 +10,74 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body class="auth-body">
-    <div class="auth-card">
-        <h1>Sattrack Estoque</h1>
-        
-        {% if error %}
-            <div class="alert error">{{ error }}</div>
-        {% endif %}
-        <form method="post" action="/login" class="auth-form">
-            <label>Email
-                <input type="email" name="email" autocomplete="username" required>
-            </label>
-            <label>Senha
-                <input type="password" name="senha" autocomplete="current-password" required>
-            </label>
-            <button class="btn" type="submit">Entrar</button>
-        </form>
+    <div class="auth-ornament ornament-1"></div>
+    <div class="auth-ornament ornament-2"></div>
+    <div class="auth-ornament ornament-3"></div>
+
+    <div class="auth-container">
+        <div class="auth-card glass">
+            <div class="auth-header">
+                <div class="brand-mark">S</div>
+                <div>
+                    <h1>Sattrack Estoque</h1>
+                    <p class="auth-subtitle">Sistema interno de controle e gestão de estoque</p>
+                </div>
+            </div>
+
+            {% if error %}
+                <div class="alert error">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" action="/login" class="auth-form">
+                <label class="input-field">
+                    <span class="input-label">Email</span>
+                    <div class="input-shell">
+                        <span class="input-icon">&#9993;</span>
+                        <input type="email" name="email" autocomplete="username" placeholder="seu@email.com" required>
+                    </div>
+                </label>
+                <label class="input-field">
+                    <span class="input-label">Senha</span>
+                    <div class="input-shell">
+                        <span class="input-icon">&#128274;</span>
+                        <input id="password" type="password" name="senha" autocomplete="current-password" placeholder="••••••••" required>
+                        <button type="button" class="toggle-pass" aria-label="Mostrar senha" onclick="togglePassword()">
+                            <span class="eye open">&#128065;</span>
+                        </button>
+                    </div>
+                </label>
+                <div class="auth-actions">
+                    <a href="#" class="ghost-link">Esqueci minha senha</a>
+                    <a href="#" class="ghost-link">Criar conta</a>
+                </div>
+                <button class="btn primary auth-btn" type="submit">
+                    Entrar
+                </button>
+            </form>
+        </div>
     </div>
+
+    <script>
+        (function() {
+            const storageKey = "sattrack-theme";
+            const root = document.documentElement;
+            const media = window.matchMedia("(prefers-color-scheme: dark)");
+            const saved = localStorage.getItem(storageKey);
+            const initial = saved || (media.matches ? "dark" : "light");
+            root.setAttribute("data-theme", initial);
+            media.addEventListener("change", (e) => {
+                if (!localStorage.getItem(storageKey)) {
+                    root.setAttribute("data-theme", e.matches ? "dark" : "light");
+                }
+            });
+        })();
+
+        function togglePassword() {
+            const input = document.getElementById('password');
+            if (!input) return;
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+        }
+    </script>
 </body>
 </html>

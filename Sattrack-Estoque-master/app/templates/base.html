@@ -27,22 +27,22 @@
                 <i class="fi fi-rr-chart-histogram icon"></i><span>Painel</span>
             </a>
             <a href="/inventario" class="{% if request.url.path.startswith('/inventario') %}active{% endif %}">
-                <i class="fi fi-rr-briefcase icon"></i><span>Inventario</span>
+                <i class="fi fi-rr-briefcase icon"></i><span>Inventário</span>
             </a>
             <a href="/movimentacoes/entradas" class="{% if request.url.path.startswith('/movimentacoes') %}active{% endif %}">
                 <i class="fi fi-rs-shopping-cart icon"></i><span>Compras</span>
             </a>
             <a href="/analise-valores" class="{% if request.url.path.startswith('/analise-valores') %}active{% endif %}">
-                <i class="fi fi-rr-badge-percent icon"></i><span>Analise de Valores</span>
+                <i class="fi fi-rr-badge-percent icon"></i><span>Análise de Valores</span>
             </a>
             <a href="/saidas" class="{% if request.url.path.startswith('/saidas') %}active{% endif %}">
-                <i class="fi fi-rs-paper-plane icon"></i><span>Saidas</span>
+                <i class="fi fi-rs-paper-plane icon"></i><span>Saídas</span>
             </a>
             <a href="/transferencias" class="{% if request.url.path.startswith('/transferencias') %}active{% endif %}">
-                <i class="fi fi-rr-arrow-right icon"></i><span>Transferencias</span>
+                <i class="fi fi-rr-arrow-right icon"></i><span>Transferências</span>
             </a>
             <a href="/filiais-setores" class="{% if request.url.path.startswith('/filiais-setores') %}active{% endif %}">
-                <i class="fi fi-rr-building icon"></i><span>Variaveis</span>
+                <i class="fi fi-rr-building icon"></i><span>Variáveis</span>
             </a>
             <a href="/controle-cpus" class="{% if request.url.path.startswith('/controle-cpus') %}active{% endif %}">
                 <i class="fi fi-rs-computer icon"></i><span>Controle de CPUs</span>
@@ -52,14 +52,18 @@
                     <i class="fi fi-rs-edit icon"></i><span>Auditoria</span>
                 </a>
                 <a href="/usuarios" class="{% if request.url.path.startswith('/usuarios') %}active{% endif %}">
-                    <i class="fi fi-rr-user icon"></i><span>Usuarios</span>
+                    <i class="fi fi-rr-user icon"></i><span>Usuários</span>
                 </a>
             {% endif %}
         </nav>
+        <div class="theme-toggle" id="themeToggle" tabindex="0" role="button" aria-label="Alternar tema" data-mode="light">
+            <div class="toggle-track"><div class="toggle-thumb"></div></div>
+            <span class="toggle-label">Modo escuro</span>
+        </div>
         {% if user %}
         <div class="sidebar-user">
             {% if user.foto %}
-                <img src="{{ user.foto }}" alt="Foto do usuario" class="avatar">
+                <img src="{{ user.foto }}" alt="Foto do usuário" class="avatar">
             {% else %}
                 <div class="avatar fallback">{{ user.nome[:1]|upper }}</div>
             {% endif %}
@@ -83,5 +87,49 @@
         </section>
     </main>
 </div>
+<script>
+    (function() {
+        const storageKey = "sattrack-theme";
+        const root = document.documentElement;
+        const toggle = document.getElementById("themeToggle");
+        const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+        function applyTheme(theme, persist = true) {
+            root.setAttribute("data-theme", theme);
+            if (persist) localStorage.setItem(storageKey, theme);
+            if (toggle) {
+                toggle.dataset.mode = theme;
+                const label = toggle.querySelector(".toggle-label");
+                if (label) label.textContent = theme === "dark" ? "Modo claro" : "Modo escuro";
+            }
+        }
+
+        const saved = localStorage.getItem(storageKey);
+        const initial = saved || (media.matches ? "dark" : "light");
+        applyTheme(initial, false);
+
+        function handleToggle() {
+            const current = root.getAttribute("data-theme") === "dark" ? "dark" : "light";
+            applyTheme(current === "dark" ? "light" : "dark");
+        }
+
+        if (toggle) {
+            toggle.addEventListener("click", handleToggle);
+            toggle.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    handleToggle();
+                }
+            });
+        }
+
+        media.addEventListener("change", (e) => {
+            const savedPref = localStorage.getItem(storageKey);
+            if (!savedPref) {
+                applyTheme(e.matches ? "dark" : "light", false);
+            }
+        });
+    })();
+</script>
 </body>
 </html>

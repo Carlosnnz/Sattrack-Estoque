@@ -7,7 +7,7 @@
             <div>
                 <p class="eyebrow">Infraestrutura</p>
                 <h3>Controle de CPUs</h3>
-                <p class="muted">Gerencie colaboradores, filiais e especificacoes tecnicas em um so lugar.</p>
+                <p class="muted">Gerencie colaboradores, filiais e especificações técnicas em um só lugar.</p>
             </div>
             <div class="pill ghost">Total: {{ total }} registros</div>
         </div>
@@ -38,7 +38,7 @@
                 <div class="icon-wrap"><i class="fi fi-rr-building"></i></div>
                 <div>
                     <p class="muted">{{ filial }}</p>
-                    <div class="stat-value">{{ total }} maquinas</div>
+                    <div class="stat-value">{{ total }} máquinas</div>
                 </div>
             </div>
             {% endfor %}
@@ -46,7 +46,7 @@
     </div>
 
     {% if erro == 'tag' %}
-        <div class="alert error">TAG ja existe. Use um codigo de patrimonio unico.</div>
+        <div class="alert error">TAG já existe. Use um código de patrimônio único.</div>
     {% endif %}
 
     <div class="grid two cpu-grid">
@@ -84,10 +84,10 @@
                 </label>
                 <label>TAG<input name="tag" placeholder="SAT-43021" required></label>
                 <label>Processador<input name="processador" placeholder="i5-10400, Ryzen 5" required></label>
-                <label>Memoria RAM<input name="memoria_ram" placeholder="8 GB, 16 GB" required></label>
-                <label>Placa de Video<input name="placa_video" placeholder="Integrada, GTX 1050" required></label>
+                <label>Memória RAM<input name="memoria_ram" placeholder="8 GB, 16 GB" required></label>
+                <label>Placa de Vídeo<input name="placa_video" placeholder="Integrada, GTX 1050" required></label>
                 <label>Anydesk<input name="anydesk" required placeholder="000 000 000"></label>
-                <label class="span-2">Observacoes
+                <label class="span-2">Observações
                     <textarea name="observacoes" placeholder="Opcional"></textarea>
                 </label>
                 <div class="form-actions">
@@ -160,6 +160,8 @@
                     {% set base_params = 'setor=' ~ filtro_setor ~ '&filial=' ~ filtro_filial ~ '&categoria=' ~ filtro_categoria ~ '&nome=' ~ filtro_nome ~ '&tag=' ~ filtro_tag ~ '&busca=' ~ filtro_busca %}
                     {% set dir_nome = 'desc' if filtro_sort == 'nome' and filtro_dir == 'asc' else 'asc' %}
                     {% set dir_tag = 'desc' if filtro_sort == 'tag' and filtro_dir == 'asc' else 'asc' %}
+                    {% set dir_categoria = 'desc' if filtro_sort == 'categoria' and filtro_dir == 'asc' else 'asc' %}
+                    {% set dir_setor = 'desc' if filtro_sort == 'setor' and filtro_dir == 'asc' else 'asc' %}
                     <tr>
                         <th>
                             <a class="sortable {% if filtro_sort == 'nome' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=nome&dir={{ dir_nome }}">
@@ -167,7 +169,12 @@
                                 <span class="caret">{% if filtro_sort == "nome" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
                             </a>
                         </th>
-                        <th>Setor</th>
+                        <th>
+                            <a class="sortable {% if filtro_sort == 'setor' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=setor&dir={{ dir_setor }}">
+                                Setor
+                                <span class="caret">{% if filtro_sort == "setor" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
+                            </a>
+                        </th>
                         <th>Filial</th>
                         <th>
                             <a class="sortable {% if filtro_sort == 'tag' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=tag&dir={{ dir_tag }}">
@@ -176,9 +183,14 @@
                             </a>
                         </th>
                         <th>Processador</th>
-                        <th>Memoria RAM</th>
-                        <th>Placa de Video</th>
-                        <th>Categoria</th>
+                        <th>Memória RAM</th>
+                        <th>Placa de Vídeo</th>
+                        <th>
+                            <a class="sortable {% if filtro_sort == 'categoria' %}active{% endif %}" href="/controle-cpus?{{ base_params }}&page=1&sort=categoria&dir={{ dir_categoria }}">
+                                Categoria
+                                <span class="caret">{% if filtro_sort == "categoria" %}{% if filtro_dir == "asc" %}^{{ "" }}{% else %}v{% endif %}{% else %}<> {% endif %}</span>
+                            </a>
+                        </th>
                         <th>Anydesk</th>
                         <th></th>
                     </tr>
@@ -236,13 +248,13 @@
             </table>
         </div>
         <div class="pagination modern" style="justify-content: space-between; flex-wrap: wrap;">
-            <div class="page-info strong">Pagina {{ page }} / {{ total_pages }}</div>
+            <div class="page-info strong">Página {{ page }} / {{ total_pages }}</div>
             <div class="inline-actions">
                 {% set prev_page = page - 1 %}
                 {% set next_page = page + 1 %}
                 {% set sort_params = '&sort=' ~ filtro_sort ~ '&dir=' ~ filtro_dir %}
                 <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ prev_page }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
-                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ next_page }}"{% endif %}>Proxima <i class="fi fi-rr-angle-right"></i></a>
+                <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/controle-cpus?setor={{ filtro_setor }}&filial={{ filtro_filial }}&categoria={{ filtro_categoria }}&nome={{ filtro_nome }}&tag={{ filtro_tag }}&busca={{ filtro_busca }}{{ sort_params }}&page={{ next_page }}"{% endif %}>Próxima <i class="fi fi-rr-angle-right"></i></a>
             </div>
         </div>
     </div>

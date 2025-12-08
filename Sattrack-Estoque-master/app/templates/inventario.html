@@ -1,23 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Inventario{% endblock %}
+{% block title %}Inventário{% endblock %}
 {% block content %}
 <div class="inventory-page">
     <div class="card toolbar-card">
         <div class="toolbar-heading">
             <div>
-                <p class="eyebrow">Filtro rapido</p>
-                <h3>Inventario</h3>
+                <p class="eyebrow">Filtro rápido</p>
+                <h3>Inventário</h3>
             </div>
             <div class="pill ghost">Total: {{ total }} itens</div>
         </div>
         <form method="get" action="/inventario" class="filter-toolbar">
             <div class="input-chip">
                 <i class="fi fi-rr-barcode icon"></i>
-                <input name="codigo" value="{{ filtro_codigo }}" placeholder="Codigo">
+                <input name="codigo" value="{{ filtro_codigo }}" placeholder="Código">
             </div>
             <div class="input-chip grow">
                 <i class="fi fi-rr-search icon"></i>
-                <input name="descricao" value="{{ filtro_descricao }}" placeholder="Descricao">
+                <input name="descricao" value="{{ filtro_descricao }}" placeholder="Descrição">
             </div>
             <div class="input-chip select-chip">
                 <i class="fi fi-rr-box icon"></i>
@@ -40,20 +40,20 @@
             {% if erro %}
                 <div class="alert error">
                     {% if erro == 'codigo' %}
-                        Codigo interno ja existe.
+                        Código interno já existe.
                     {% elif erro == 'item_relacionado' %}
-                        Nao e possivel excluir: existem movimentacoes (entradas/saidas/transferencias) vinculadas a este item.
+                        Não é possível excluir: existem movimentações (entradas/saídas/transferências) vinculadas a este item.
                         {% if item_relacionado %}
                             <div class="alert-note">
                                 <strong>Item:</strong> {{ item_relacionado.descricao }} ({{ item_relacionado.codigo_interno }})
                             </div>
-                            <form method="post" action="/items/{{ item_relacionado.id }}/deletar" onsubmit="return confirm('Excluir item e apagar todas as movimentacoes vinculadas?');">
+                            <form method="post" action="/items/{{ item_relacionado.id }}/deletar" onsubmit="return confirm('Excluir item e apagar todas as movimentações vinculadas?');">
                                 <input type="hidden" name="force" value="1">
                                 <button class="btn danger" type="submit">Excluir mesmo assim</button>
                             </form>
                         {% endif %}
                     {% else %}
-                        Ocorreu um erro ao processar sua solicitacao.
+                        Ocorreu um erro ao processar sua solicitação.
                     {% endif %}
                 </div>
             {% endif %}
@@ -62,11 +62,11 @@
                     <p class="eyebrow">Cadastro</p>
                     <h3>Novo item</h3>
                 </div>
-                <div class="pill blue">Registro rapido</div>
+                <div class="pill blue">Registro rápido</div>
             </div>
             <form method="post" action="/inventario/cadastrar" enctype="multipart/form-data" class="inventory-form">
-                <label>Codigo Interno<input name="codigo_interno" required placeholder="EX: SAT-1001"></label>
-                <label>Descricao<input name="descricao" required placeholder="Notebook Dell 3520"></label>
+                <label>Código Interno<input name="codigo_interno" required placeholder="EX: SAT-1001"></label>
+                <label>Descrição<input name="descricao" required placeholder="Notebook Dell 3520"></label>
                 <label>Categoria
                     <select name="categoria">
                         <option value="">Selecione</option>
@@ -76,9 +76,9 @@
                     </select>
                 </label>
                 <label>Quantidade<input type="number" name="quantidade" min="0" value="0" placeholder="0"></label>
-                <label>Valor Unitario<input type="number" step="0.01" name="valor_unitario" value="0.00" required placeholder="0,00"></label>
-                <label>Localizacao<input name="localizacao" placeholder="Ex: Almoxarifado A1"></label>
-                <label class="span-2">Observacao<textarea name="observacao" placeholder="Opcional"></textarea></label>
+                <label>Valor Unitário<input type="number" step="0.01" name="valor_unitario" value="0.00" required placeholder="0,00"></label>
+                <label>Localização<input name="localizacao" placeholder="Ex: Almoxarifado A1"></label>
+                <label class="span-2">Observação<textarea name="observacao" placeholder="Opcional"></textarea></label>
                 <div class="dropzone">
                     <i class="fi fi-rr-picture"></i>
                     <div>
@@ -97,7 +97,7 @@
             <div class="card-header spaced">
                 <div>
                     <p class="eyebrow">Itens</p>
-                    <h3>Lista do inventario</h3>
+                    <h3>Lista do inventário</h3>
                 </div>
                 <div class="pill ghost">{{ total }} itens</div>
             </div>
@@ -107,8 +107,8 @@
                         <tr>
                             <th>#</th>
                             <th>Foto</th>
-                            <th>Codigo</th>
-                            <th>Descricao</th>
+                            <th>Código</th>
+                            <th>Descrição</th>
                             <th>Categoria</th>
                             <th>Qtd</th>
                             <th>Valor</th>
@@ -166,9 +166,9 @@
                 <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/inventario?codigo={{ filtro_codigo }}&descricao={{ filtro_descricao }}&categoria={{ filtro_categoria }}&page={{ prev_page }}"{% endif %}>
                     <i class="fi fi-rr-angle-left"></i> Anterior
                 </a>
-                <span class="page-info strong">Pagina {{ page }} de {{ total_pages }}</span>
+                <span class="page-info strong">Página {{ page }} de {{ total_pages }}</span>
                 <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/inventario?codigo={{ filtro_codigo }}&descricao={{ filtro_descricao }}&categoria={{ filtro_categoria }}&page={{ next_page }}"{% endif %}>
-                    Proxima <i class="fi fi-rr-angle-right"></i>
+                    Próxima <i class="fi fi-rr-angle-right"></i>
                 </a>
             </div>
         </div>

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Movimentacoes{% endblock %}
+{% block title %}Movimentações{% endblock %}
 {% block content %}
 <div class="mov-page">
     <div class="card toolbar-card">
         <div class="toolbar-heading">
             <div>
-                <p class="eyebrow">Visao rapida</p>
-                <h3>Movimentacoes</h3>
+                <p class="eyebrow">Visão rápida</p>
+                <h3>Movimentações</h3>
             </div>
             <div class="pill ghost">Total: {{ total }} registros</div>
         </div>
@@ -18,7 +18,7 @@
                     <option value="" {% if selected_tipo == '' %}selected{% endif %}>Tipo</option>
                     <option value="compra" {% if selected_tipo=='compra' %}selected{% endif %}>Compra</option>
                     <option value="entrada_manual" {% if selected_tipo=='entrada_manual' %}selected{% endif %}>Entrada Manual</option>
-                    <option value="entrada_automatica" {% if selected_tipo=='entrada_automatica' %}selected{% endif %}>Entrada Automatica</option>
+                    <option value="entrada_automatica" {% if selected_tipo=='entrada_automatica' %}selected{% endif %}>Entrada Automática</option>
                 </select>
             </div>
             <div class="input-chip select-chip">
@@ -45,7 +45,7 @@
             </div>
             <div class="input-chip grow">
                 <i class="fi fi-rr-user"></i>
-                <input name="destinatario" value="{{ filtro_destinatario }}" placeholder="Destinatario">
+                <input name="destinatario" value="{{ filtro_destinatario }}" placeholder="Destinatário">
             </div>
             <div class="input-chip select-chip">
                 <i class="fi fi-rr-badge-check"></i>
@@ -111,9 +111,9 @@
                         {% endfor %}
                     </select>
                 </label>
-                <label>Destinatario<input name="destinatario" required placeholder="Responsavel"></label>
+                <label>Destinatário<input name="destinatario" required placeholder="Responsável"></label>
                 <label>Quantidade<input type="number" name="quantidade" min="1" value="1" required></label>
-                <label>Custo Unitario<input type="number" step="0.01" name="custo_unitario" required placeholder="0,00"></label>
+                <label>Custo Unitário<input type="number" step="0.01" name="custo_unitario" required placeholder="0,00"></label>
                 <label>Data do Pedido<input type="date" name="data_pedido"></label>
                 <label>Status
                     <select name="status" required>
@@ -149,10 +149,10 @@
         <div class="card elevated">
             <div class="card-header spaced">
                 <div>
-                    <p class="eyebrow">Historico</p>
-                    <h3>Movimentacoes</h3>
+                    <p class="eyebrow">Histórico</p>
+                    <h3>Movimentações</h3>
                 </div>
-                <div class="pill ghost">Pagina {{ page }} de {{ total_pages }}</div>
+                <div class="pill ghost">Página {{ page }} de {{ total_pages }}</div>
             </div>
             <div class="table-responsive mov-table">
                 <table>
@@ -161,8 +161,8 @@
                             <th>Tipo</th>
                             <th>Item</th>
                             <th>Qtd</th>
-                            <th>Destinatario</th>
-                            <th>Usuario</th>
+                            <th>Destinatário</th>
+                            <th>Usuário</th>
                             <th>Fornecedor</th>
                             <th>Custo</th>
                             <th>Data</th>
@@ -228,16 +228,16 @@
                                                 <button class="btn" type="submit">Salvar</button>
                                             </form>
                                             <form method="post" action="/compras/{{ mov.compra_id }}/deletar" onsubmit="return confirm('Excluir compra?');">
-                                                <button class="btn danger" type="submit">Excluir</button>
-                                            </form>
-                                        </details>
-                                    {% else %}
-                                        <span class="badge">Visualizacao</span>
-                                    {% endif %}
-                                </td>
-                            </tr>
+                                    <button class="btn danger" type="submit">Excluir</button>
+                                </form>
+                            </details>
+                        {% else %}
+                            <span class="badge">Visualização</span>
                         {% endif %}
-                    {% endfor %}
+                    </td>
+                </tr>
+            {% endif %}
+        {% endfor %}
                     {% if compras.total == 0 %}
                         <tr><td colspan="11">Nenhuma compra encontrada.</td></tr>
                     {% endif %}
@@ -250,9 +250,9 @@
                 <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ prev_page }}"{% endif %}>
                     <i class="fi fi-rr-angle-left"></i> Anterior
                 </a>
-                <span class="page-info strong">Pagina {{ page }} / {{ total_pages }}</span>
+                <span class="page-info strong">Página {{ page }} / {{ total_pages }}</span>
                 <a class="page-btn {% if page == total_pages %}disabled{% endif %}" {% if page < total_pages %}href="/movimentacoes/entradas?tipo={{ filtro_tipo }}&fornecedor={{ filtro_fornecedor }}&categoria={{ filtro_categoria }}&item={{ filtro_item }}&status={{ filtro_status }}&destinatario={{ filtro_destinatario }}&data={{ filtro_data }}&page={{ next_page }}"{% endif %}>
-                    Proxima <i class="fi fi-rr-angle-right"></i>
+                    Próxima <i class="fi fi-rr-angle-right"></i>
                 </a>
             </div>
         </div>

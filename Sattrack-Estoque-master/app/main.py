@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, func, text, or_, cast
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, func, text, or_, cast, case
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
 
 # Database setup
@@ -975,15 +975,39 @@ def controle_cpus_page(
         )
     sort = (sort or "nome").lower()
     dir = (dir or "asc").lower()
-    if sort not in {"nome", "tag"}:
+    if sort not in {"nome", "tag", "categoria", "setor"}:
         sort = "nome"
     if dir not in {"asc", "desc"}:
         dir = "asc"
-    sort_column = CPU.nome if sort == "nome" else CPU.tag
+    if sort == "nome":
+        sort_column = func.lower(CPU.nome)
+        tie_breakers = (CPU.tag, CPU.categoria, CPU.nome)
+    elif sort == "tag":
+        sort_column = func.lower(CPU.tag)
+        tie_breakers = (CPU.nome, CPU.categoria, CPU.tag)
+    elif sort == "categoria":
+        categoria_order = case(
+            (CPU.categoria == "NOVA-FORTE", 1),
+            (CPU.categoria == "NOVA", 2),
+            (CPU.categoria == "FRACA-ANTIGA", 3),
+            else_=4,
+        )
+        # usa a ordem customizada e baixa para desempate consistente
+        sort_column = categoria_order
+        tie_breakers = (func.lower(CPU.categoria), CPU.nome, CPU.tag)
+    else:  # setor
+        sort_column = func.lower(CPU.setor)
+        tie_breakers = (CPU.nome, CPU.tag, CPU.categoria)
     if dir == "asc":
-        query = query.order_by(func.lower(sort_column).asc(), CPU.tag.asc(), CPU.nome.asc())
+        query = query.order_by(
+            sort_column.asc(),
+            *[col.asc() for col in tie_breakers],
+        )
     else:
-        query = query.order_by(func.lower(sort_column).desc(), CPU.tag.desc(), CPU.nome.desc())
+        query = query.order_by(
+            sort_column.desc(),
+            *[col.desc() for col in tie_breakers],
+        )
 
     page = max(page, 1)
     per_page = 15

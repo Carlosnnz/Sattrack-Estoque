@@ -3,26 +3,26 @@
 {% block content %}
 <div class="grid stats">
     <div class="card stat-card">
-        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;">
             <i class="fi fi-rr-box"></i><span>Total de Itens</span>
         </p>
         <div class="stat-value">{{ total_itens }}</div>
     </div>
     <div class="card stat-card">
-        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;">
             <i class="fi fi-rr-layers"></i><span>Quantidade em Estoque</span>
         </p>
         <div class="stat-value">{{ total_quantidade }}</div>
     </div>
     <div class="card stat-card">
-        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;">
             <i class="fi fi-rr-coin"></i><span>Valor Total</span>
         </p>
         <div class="stat-value">{{ valor_total|real }}</div>
         <p class="stat-sub">Inventário calculado pela última entrada</p>
     </div>
     <div class="card stat-card">
-        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;color:#111827;">
+        <p class="stat-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;">
             <i class="fi fi-rr-time-fast"></i><span>Movimentações Hoje</span>
         </p>
         <div class="stat-value">{{ movimentacoes_hoje }}</div>
@@ -101,11 +101,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 async function loadCharts() {
+    const root = document.documentElement;
+    const getVar = (name, fallback) => (getComputedStyle(root).getPropertyValue(name) || "").trim() || fallback;
+    const isDark = (root.getAttribute("data-theme") || "").toLowerCase() === "dark";
     const colors = {
         primary: '#2563eb',
         primaryAccent: '#3b82f6',
         red: '#ef4444',
-        grid: 'rgba(15,23,42,0.08)',
+        text: getVar('--text', '#111827'),
+        muted: getVar('--muted', '#4b5563'),
+        grid: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.08)',
+        tooltipBg: isDark ? '#0b1220' : '#0f172a'
     };
 
     const estoque = await fetch('/api/dashboard/estoque').then(r => r.json());
@@ -152,7 +158,9 @@ async function loadCharts() {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: '#0f172a',
+                    backgroundColor: colors.tooltipBg,
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
                     callbacks: {
                         label: (ctx) => {
                             const value = ctx.raw ?? 0;
@@ -165,11 +173,11 @@ async function loadCharts() {
             scales: {
                 x: {
                     beginAtZero: true,
-                    ticks: { precision: 0 },
+                    ticks: { precision: 0, color: colors.muted },
                     grid: { color: colors.grid, drawBorder: false }
                 },
                 y: {
-                    ticks: { autoSkip: false, padding: 6, color: '#111827' },
+                    ticks: { autoSkip: false, padding: 6, color: colors.text },
                     grid: { display: false }
                 }
             }
@@ -227,18 +235,18 @@ async function loadCharts() {
             plugins: {
                 legend: {
                     position: 'top',
-                    labels: { usePointStyle: true, boxWidth: 10 }
+                    labels: { usePointStyle: true, boxWidth: 10, color: colors.text }
                 },
-                tooltip: { backgroundColor: '#0f172a' }
+                tooltip: { backgroundColor: colors.tooltipBg, titleColor: '#fff', bodyColor: '#fff' }
             },
             scales: {
                 y: {
                     beginAtZero: true,
-                    ticks: { precision: 0, color: '#4b5563' },
+                    ticks: { precision: 0, color: colors.muted },
                     grid: { color: colors.grid, drawBorder: false }
                 },
                 x: {
-                    ticks: { color: '#4b5563' },
+                    ticks: { color: colors.muted },
                     grid: { display: false, drawBorder: false }
                 }
             }
@@ -254,7 +262,7 @@ async function loadCharts() {
             if (!meta.data.length) return;
             const { x, y } = meta.data[0].getProps(['x', 'y'], true);
             ctx.save();
-            ctx.fillStyle = '#111827';
+            ctx.fillStyle = colors.text;
             ctx.textAlign = 'center';
             ctx.font = '700 14px "Inter","Poppins",system-ui';
             ctx.fillText('Total', x, y - 6);
@@ -283,9 +291,12 @@ async function loadCharts() {
             plugins: {
                 legend: {
                     position: 'bottom',
-                    labels: { usePointStyle: true, boxWidth: 10 }
+                    labels: { usePointStyle: true, boxWidth: 10, color: colors.text }
                 },
                 tooltip: {
+                    backgroundColor: colors.tooltipBg,
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
                     callbacks: {
                         label: (ctx) => {
                             const value = ctx.raw ?? 0;

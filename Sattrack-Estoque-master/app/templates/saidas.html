@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Saidas{% endblock %}
+{% block title %}Saídas{% endblock %}
 {% block content %}
 <div class="mov-page">
     <div class="card toolbar-card">
         <div class="toolbar-heading">
             <div>
-                <p class="eyebrow">Visao rapida</p>
-                <h3>Saidas</h3>
+                <p class="eyebrow">Saídas</p>
+                <h3>Log de saídas</h3>
+                <p class="muted">Filtros rápidos por item, quantidade e destino.</p>
             </div>
             <div class="pill ghost">Total: {{ total_saidas }} registros</div>
         </div>
@@ -58,7 +59,7 @@
             <div class="card-header spaced">
                 <div>
                     <p class="eyebrow">Registrar</p>
-                    <h3>Saida</h3>
+                    <h3>Saída</h3>
                 </div>
             </div>
             <form method="post" action="/saidas/registrar" class="mov-form">
@@ -97,8 +98,8 @@
         <div class="card elevated">
             <div class="card-header spaced">
                 <div>
-                    <p class="eyebrow">Saidas</p>
-                    <h3>Ultimos 30 dias</h3>
+                    <p class="eyebrow">Saídas</p>
+                    <h3>Últimos 30 dias</h3>
                 </div>
                 <div class="pill ghost">Atualize para novos dados</div>
             </div>
@@ -110,12 +111,6 @@
     </div>
 
     <div class="card elevated">
-        <div class="card-header spaced">
-            <div>
-                <p class="eyebrow">Historico</p>
-                <h3>Ultimas sa?das</h3>
-            </div>
-        </div>
         <div class="table-responsive mov-table">
             <table>
                 <thead>
@@ -123,7 +118,7 @@
                         <th>Item</th>
                         <th>Qtd</th>
                         <th>Filial/Setor</th>
-                        <th>Usuario</th>
+                        <th>Usuário</th>
                         <th>Motivo</th>
                         <th>Data</th>
                         <th></th>
@@ -139,7 +134,7 @@
                         <td>{{ s.motivo }}</td>
                         <td>{{ s.created_at|datetime }}</td>
                         <td class="actions">
-                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saida e ajustar estoque?');">
+                            <form method="post" action="/saidas/{{ s.id }}/deletar" onsubmit="return confirm('Excluir saída e ajustar estoque?');">
                                 <button class="btn icon-only danger" type="submit" title="Excluir"><i class="fi fi-rr-trash"></i></button>
                             </form>
                         </td>
@@ -152,10 +147,14 @@
         </div>
         {% if pages > 1 %}
         {% set qp = '&item_id=' ~ f_item_id ~ '&quantidade=' ~ f_quantidade ~ '&filial=' ~ f_filial ~ '&setor=' ~ f_setor ~ '&motivo=' ~ f_motivo %}
-        <div class="pagination modern">
-            <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/saidas?page={{ page - 1 }}{{ qp }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
-            <span class="page-info strong">Pagina {{ page }} / {{ pages }}</span>
-            <a class="page-btn {% if page == pages %}disabled{% endif %}" {% if page < pages %}href="/saidas?page={{ page + 1 }}{{ qp }}"{% endif %}>Proxima <i class="fi fi-rr-angle-right"></i></a>
+        <div class="pagination modern" style="justify-content: space-between; flex-wrap: wrap;">
+            <div class="page-info strong">Página {{ page }} / {{ pages }}</div>
+            <div class="inline-actions">
+                {% set prev_page = page - 1 %}
+                {% set next_page = page + 1 %}
+                <a class="page-btn {% if page == 1 %}disabled{% endif %}" {% if page > 1 %}href="/saidas?page={{ page - 1 }}{{ qp }}"{% endif %}><i class="fi fi-rr-angle-left"></i> Anterior</a>
+                <a class="page-btn {% if page == pages %}disabled{% endif %}" {% if page < pages %}href="/saidas?page={{ page + 1 }}{{ qp }}"{% endif %}>Próxima <i class="fi fi-rr-angle-right"></i></a>
+            </div>
         </div>
         {% endif %}
     </div>
@@ -194,7 +193,7 @@
                 data: {
                     labels: serie.labels,
                     datasets: [{
-                        label: 'Saidas',
+                        label: 'Saídas',
                         data: serie.quantidades,
                         borderColor: '#ef4444',
                         backgroundColor: gradient,
@@ -230,7 +229,7 @@
                 }
             });
         } catch (err) {
-            console.error('Erro ao carregar grafico de saidas', err);
+            console.error('Erro ao carregar gráfico de saídas', err);
         }
     })();
 </script>

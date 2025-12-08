@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Analise de Valores de Produtos{% endblock %}
+{% block title %}Análise de Valores de Produtos{% endblock %}
 {% block content %}
 {% set color_map = {"low": "#16a34a", "mid": "#facc15", "high": "#dc2626", "na": "#e5e7eb"} %}
 {% set text_map = {"low": "#ffffff", "mid": "#1f2937", "high": "#ffffff", "na": "#374151"} %}
@@ -7,8 +7,8 @@
     <div class="card toolbar-card">
         <div class="toolbar-heading">
             <div>
-                <p class="eyebrow">Filtro rapido</p>
-                <h3>Analise de valores</h3>
+                <p class="eyebrow">Filtro rápido</p>
+                <h3>Análise de valores</h3>
             </div>
             <div class="pill ghost">Itens: {{ linhas|length }}</div>
         </div>
@@ -47,24 +47,24 @@
             <div class="card-header spaced">
                 <div>
                     <p class="eyebrow">Adicionar</p>
-                    <h3>Item (peca)</h3>
+                    <h3>Item (peça)</h3>
                 </div>
                 <div class="pill blue">Novo</div>
             </div>
             <form action="/analise-valores/itens/criar" method="post" class="analysis-form">
-                <label>Peca
+                <label>Peça
                     <input name="nome" required placeholder="Ex: SSD NVMe 1TB">
                 </label>
                 <label>Quantidade
                     <input type="number" name="quantidade" min="1" value="1" required>
                 </label>
                 <label>Categoria
-                    <input name="categoria" placeholder="Hardware, Periferico...">
+                    <input name="categoria" placeholder="Hardware, Periférico...">
                 </label>
                 <label>Tipo
-                    <input name="tipo" placeholder="Processador, Memoria...">
+                    <input name="tipo" placeholder="Processador, Memória...">
                 </label>
-                <label class="span-2">Especificacoes
+                <label class="span-2">Especificações
                     <textarea name="especificacao" placeholder="Modelo, voltagem, compatibilidade"></textarea>
                 </label>
                 <div class="form-actions">
@@ -78,7 +78,7 @@
                     <p class="eyebrow">Adicionar</p>
                     <h3>Valor por fornecedor</h3>
                 </div>
-                <div class="pill ghost">Cotacao</div>
+                <div class="pill ghost">Cotação</div>
             </div>
             <form action="/analise-valores/valores/criar" method="post" enctype="multipart/form-data" class="analysis-form">
                 <label>Fornecedor
@@ -97,10 +97,10 @@
                         {% endfor %}
                     </select>
                 </label>
-                <label>Valor unitario
+                <label>Valor unitário
                     <input type="text" name="valor_unitario" placeholder="Ex: 529,00" required>
                 </label>
-                <label class="span-2">Observacao
+                <label class="span-2">Observação
                     <textarea name="observacao" placeholder="Prazo, frete, forma de pagamento..."></textarea>
                 </label>
                 <div class="upload-inline span-2">
@@ -127,7 +127,7 @@
                 <h3>Valores por fornecedor</h3>
             </div>
             <div class="legend">
-                <span class="dot low"></span> Menor | <span class="dot mid"></span> Medio | <span class="dot high"></span> Maior | <span class="dot na"></span> Sem preco
+                <span class="dot low"></span> Menor | <span class="dot mid"></span> Médio | <span class="dot high"></span> Maior | <span class="dot na"></span> Sem preço
             </div>
         </div>
         <div class="summary-grid">
@@ -137,7 +137,7 @@
                 <div class="summary-body">
                     <p class="muted">{{ f.nome }}</p>
                     <div class="summary-value">{{ total_por_fornecedor.get(f.id, 0)|real }}</div>
-                    <p class="summary-sub">{% if fornecedor_tem_preco.get(f.id) %}Com precos{% else %}Sem precos{% endif %}</p>
+                    <p class="summary-sub">{% if fornecedor_tem_preco.get(f.id) %}Com preços{% else %}Sem preços{% endif %}</p>
                 </div>
             </div>
             {% else %}
@@ -150,7 +150,7 @@
         <div class="card-header spaced">
             <div>
                 <p class="eyebrow">Comparativo</p>
-                <h3>Tabela de precos</h3>
+                <h3>Tabela de preços</h3>
             </div>
             <div class="pill ghost">Itens: {{ linhas|length }}</div>
         </div>
@@ -158,10 +158,10 @@
             <table class="compare-table compare-modern">
                 <thead>
                     <tr class="head-main">
-                        <th rowspan="2" class="sticky-col">Peca</th>
+                        <th rowspan="2" class="sticky-col">Peça</th>
                         <th rowspan="2" class="qty-col">Qtd</th>
-                        <th rowspan="2" class="spec-col">Especificacoes</th>
-                        <th rowspan="2" class="action-col">Acoes</th>
+                        <th rowspan="2" class="spec-col">Especificações</th>
+                        <th rowspan="2" class="action-col">Ações</th>
                         {% for f in fornecedores %}
                             <th colspan="2" class="supplier-head">
                                 <div class="supplier-header">
@@ -172,7 +172,7 @@
                     </tr>
                     <tr class="head-sub">
                         {% for f in fornecedores %}
-                            <th class="sub-unit">Valor unitario</th>
+                            <th class="sub-unit">Valor unitário</th>
                             <th class="sub-total">Total</th>
                         {% endfor %}
                     </tr>
@@ -186,7 +186,7 @@
                             <td class="qty-col">{{ linha.item.quantidade }}</td>
                             <td class="spec-col">{{ linha.item.especificacao or '-' }}</td>
                             <td class="action-col">
-                                <form method="post" action="/analise-valores/itens/{{ linha.item.id }}/deletar" onsubmit="return confirm('Excluir esta peca e valores relacionados?');">
+                                <form method="post" action="/analise-valores/itens/{{ linha.item.id }}/deletar" onsubmit="return confirm('Excluir esta peça e valores relacionados?');">
                                     <button class="btn danger" type="submit">Excluir</button>
                                 </form>
                             </td>
@@ -279,7 +279,7 @@
             <div class="card-header spaced">
                 <div>
                     <p class="eyebrow">Resumo</p>
-                    <h3>Comparacoes</h3>
+                    <h3>Comparações</h3>
                 </div>
             </div>
             <div class="summary-compare">
