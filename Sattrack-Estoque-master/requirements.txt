@@ -4,3 +4,5 @@ sqlalchemy
 jinja2
 python-multipart
 bcrypt
+reportlab
+openpyxl

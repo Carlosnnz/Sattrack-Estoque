@@ -1,4 +1,5 @@
 import datetime
+import io
 import json
 import uuid
 import os
@@ -9,12 +10,14 @@ from typing import Dict, List, Optional
 
 import bcrypt
 from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, create_engine, func, text, or_, cast, case
 from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+
+from app.compra_export import build_compras_pdf, build_compras_xlsx
 
 # Database setup
 def _get_database_url() -> str:
@@ -2149,7 +2152,6 @@ async def compras_editar(
     compra.data_pedido = data_pedido
     compra.custo_unitario = custo_unitario
     compra.status = status.lower()
-    compra.usuario = actor
     db.commit()
     if nota_fiscal and nota_fiscal.filename:
         nf_path = save_uploaded_file(nota_fiscal, f"nf/compras/{compra.id}", allow_pdf=True)
@@ -2195,6 +2197,56 @@ def compras_deletar(compra_id: int, db: Session = Depends(get_db), user=Depends(
     return RedirectResponse(url="/movimentacoes/entradas", status_code=303)
 
 
+def filtered_compras_query(db: Session, fornecedor: str = "", categoria: str = "", item: str = "", status: str = "", destinatario: str = "", data: str = ""):
+    query = db.query(Compra)
+    if fornecedor:
+        query = query.filter(Compra.fornecedor.ilike(f"%{fornecedor}%"))
+    if categoria:
+        query = query.filter(Compra.categoria.ilike(f"%{categoria}%"))
+    if item:
+        query = query.filter(Compra.item_nome.ilike(f"%{item}%"))
+    if status:
+        query = query.filter(Compra.status == status.lower())
+    if destinatario:
+        query = query.filter(Compra.destinatario.ilike(f"%{destinatario}%"))
+    if data:
+        try:
+            datetime.date.fromisoformat(data)
+            query = query.filter(Compra.data_pedido == data)
+        except ValueError:
+            pass
+    return query
+
+
+@app.get("/compras/exportar.xlsx", include_in_schema=False)
+def exportar_compras_xlsx(
+    fornecedor: str = "", categoria: str = "", item: str = "", status: str = "",
+    destinatario: str = "", data: str = "", db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    compras = filtered_compras_query(db, fornecedor, categoria, item, status, destinatario, data).order_by(Compra.id.desc()).all()
+    arquivo = build_compras_xlsx(compras)
+    return StreamingResponse(
+        io.BytesIO(arquivo),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="compras_{datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))):%Y-%m-%d}.xlsx"'},
+    )
+
+
+@app.get("/compras/exportar.pdf", include_in_schema=False)
+def exportar_compras_pdf(
+    fornecedor: str = "", categoria: str = "", item: str = "", status: str = "",
+    destinatario: str = "", data: str = "", db: Session = Depends(get_db),
+    user=Depends(require_user),
+):
+    compras = filtered_compras_query(db, fornecedor, categoria, item, status, destinatario, data).order_by(Compra.id.desc()).all()
+    arquivo = build_compras_pdf(compras)
+    return StreamingResponse(
+        io.BytesIO(arquivo), media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="compras_{datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-3))):%Y-%m-%d}.pdf"'},
+    )
+
+
 @app.get("/movimentacoes/entradas", include_in_schema=False)
 def movimentacoes_page(
     request: Request,
@@ -2210,22 +2262,14 @@ def movimentacoes_page(
     user=Depends(require_user),
 ):
     itens = db.query(Item).order_by(Item.descricao).all()
-    compras_query = db.query(Compra)
+    compras_query = filtered_compras_query(db, fornecedor, categoria, item, status, destinatario, data)
     entradas_query = db.query(Entrada)
     fornecedores_options = [f.nome for f in db.query(Fornecedor).order_by(Fornecedor.nome).all()]
     categorias_options = [c.nome for c in db.query(Categoria).order_by(Categoria.nome).all()]
 
-    if fornecedor:
-        compras_query = compras_query.filter(Compra.fornecedor.ilike(f"%{fornecedor}%"))
-    if categoria:
-        compras_query = compras_query.filter(Compra.categoria.ilike(f"%{categoria}%"))
     if item:
-        compras_query = compras_query.filter(Compra.item_nome.ilike(f"%{item}%"))
         entradas_query = entradas_query.join(Item).filter(Item.descricao.ilike(f"%{item}%"))
-    if status:
-        compras_query = compras_query.filter(Compra.status == status.lower())
     if destinatario:
-        compras_query = compras_query.filter(Compra.destinatario.ilike(f"%{destinatario}%"))
         entradas_query = entradas_query.filter(Entrada.destinatario.ilike(f"%{destinatario}%"))
     if data:
         try:
@@ -2233,7 +2277,6 @@ def movimentacoes_page(
             inicio = datetime.datetime.combine(data_ref, datetime.time.min)
             fim = inicio + datetime.timedelta(days=1)
             entradas_query = entradas_query.filter(Entrada.created_at >= inicio, Entrada.created_at < fim)
-            compras_query = compras_query.filter(Compra.data_pedido == data)
         except Exception:
             pass
 
@@ -2274,6 +2317,7 @@ def movimentacoes_page(
                     "destino": c.destino,
                     "custo": c.custo_unitario,
                     "data_mov": data_ref,
+                    "data_pedido": c.data_pedido,
                     "status": c.status,
                     "nota_fiscal": c.caminho_nf,
                     "compra_id": c.id,

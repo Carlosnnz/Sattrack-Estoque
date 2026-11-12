@@ -63,6 +63,8 @@
             <div class="toolbar-actions">
                 <button class="btn ghost-btn" type="submit"><i class="fi fi-rr-search"></i><span>Filtrar</span></button>
                 <a class="btn tertiary" href="/movimentacoes/entradas"><i class="fi fi-rr-refresh"></i><span>Limpar</span></a>
+                <a class="btn tertiary" href="/compras/exportar.pdf?{{ request.url.query }}"><i class="fi fi-rr-file-pdf"></i><span>PDF</span></a>
+                <a class="btn tertiary" href="/compras/exportar.xlsx?{{ request.url.query }}"><i class="fi fi-rr-file-spreadsheet"></i><span>Excel</span></a>
             </div>
         </form>
     </div>
@@ -162,7 +164,7 @@
                             <th>Item</th>
                             <th>Qtd</th>
                             <th>Destinatário</th>
-                            <th>Usuário</th>
+                            <th>Registrado por</th>
                             <th>Fornecedor</th>
                             <th>Custo</th>
                             <th>Data</th>
@@ -185,7 +187,7 @@
                                 </td>
                                 <td><span class="pill {{ 'danger' if is_low else 'blue' }}">{{ mov.quantidade }}</span></td>
                                 <td>{{ mov.destinatario }}</td>
-                                <td>{{ mov.usuario or '-' }}</td>
+                                <td>{{ mov.usuario or 'Não informado' }}</td>
                                 <td>{{ mov.fornecedor or '-' }}</td>
                                 <td class="mono">R$ {{ "%.2f"|format(mov.custo or 0) }}</td>
                                 <td>{{ mov.data_mov|datetime }}</td>
@@ -216,7 +218,7 @@
                                                 <input name="destino" value="{{ mov.destino or '' }}">
                                                 <input name="destinatario" value="{{ mov.destinatario }}" required>
                                                 <input type="number" name="quantidade" value="{{ mov.quantidade }}" min="1" required>
-                                                <input type="date" name="data_pedido">
+                                                <input type="date" name="data_pedido" value="{{ mov.data_pedido or '' }}">
                                                 <input type="number" step="0.01" name="custo_unitario" value="{{ mov.custo or 0 }}" required>
                                                 <select name="status">
                                                     <option value="pendente" {% if mov.status=='pendente' %}selected{% endif %}>Pendente</option>
